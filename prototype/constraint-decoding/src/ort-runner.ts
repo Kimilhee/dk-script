@@ -28,6 +28,11 @@ interface Cache {
   value: RuntimeTensor;
 }
 
+export interface DecodeOptions {
+  beamSize?: number;
+  maxLength?: number;
+}
+
 export class OrtRecognizer {
   private readonly runtime: RuntimeAdapter;
   private readonly encoder: RuntimeSession;
@@ -65,6 +70,7 @@ export class OrtRecognizer {
     context: RecognitionContext,
     mode: DecodeMode,
     existingMemory?: Memory,
+    options: DecodeOptions = {},
   ): Promise<RecognitionResult> {
     const started = performance.now();
     const memory = existingMemory ?? (await this.encode(strokes));
@@ -73,8 +79,8 @@ export class OrtRecognizer {
       vocab: this.vocab,
       context,
       mode,
-      beamSize: 3,
-      maxLength: 64,
+      beamSize: options.beamSize ?? 3,
+      maxLength: options.maxLength ?? 64,
       step: async (cache, lastToken, step) => {
         const results = await this.decoder.run({
           tgt_last: this.runtime.tensor("int64", new BigInt64Array([BigInt(lastToken)]), [1, 1]),

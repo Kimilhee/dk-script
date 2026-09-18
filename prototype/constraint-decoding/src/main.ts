@@ -17,6 +17,7 @@ let current: Stroke | undefined;
 let requestId = 0;
 let idleTimer: number | undefined;
 let ready = false;
+let recognitionStartedAt = 0;
 
 resizeCanvas();
 window.addEventListener("resize", resizeCanvas);
@@ -25,7 +26,8 @@ canvas.addEventListener("pointermove", pointerMove);
 canvas.addEventListener("pointerup", pointerUp);
 canvas.addEventListener("pointercancel", pointerUp);
 element<HTMLButtonElement>("clear").addEventListener("click", clear);
-element<HTMLButtonElement>("recognize").addEventListener("click", () => void recognize());
+element<HTMLButtonElement>("recognize").addEventListener("click", () => void recognize("fast"));
+element<HTMLButtonElement>("compare").addEventListener("click", () => void recognize("compare"));
 setStatus("모델 로딩 중…");
 void initialize();
 
@@ -39,6 +41,8 @@ async function initialize(): Promise<void> {
     }
     worker = new Worker(new URL("./worker.ts", import.meta.url), { type: "module" });
     worker.addEventListener("message", receiveWorkerMessage);
+    worker.addEventListener("error", (event) => setStatus(`Worker 오류: ${event.message}`));
+    worker.addEventListener("messageerror", () => setStatus("Worker 메시지 오류"));
     worker.postMessage({ type: "load" });
   } catch (error) {
     setStatus(`초기화 오류: ${error instanceof Error ? error.message : String(error)}`);
@@ -67,7 +71,7 @@ function pointerUp(event: PointerEvent): void {
   current = undefined;
   redraw();
   window.clearTimeout(idleTimer);
-  idleTimer = window.setTimeout(() => void recognize(), 250);
+  idleTimer = window.setTimeout(() => void recognize("fast"), 250);
 }
 
 function appendPoint(event: PointerEvent): void {
@@ -113,16 +117,19 @@ function clear(): void {
   setStatus(ready ? "준비됨" : "모델 로딩 중…");
 }
 
-async function recognize(): Promise<void> {
+async function recognize(profile: "fast" | "compare"): Promise<void> {
   if (!ready || !worker || strokes.length === 0) return;
   requestId += 1;
-  setStatus("네 모드 디코딩 중…");
+  recognitionStartedAt = performance.now();
+  const requestedModes: DecodeMode[] = profile === "fast" ? ["problem"] : modes;
+  setStatus(profile === "fast" ? "빠른 인식 중…" : "네 모드 비교 중…");
   worker.postMessage({
     type: "recognize",
     id: requestId,
     strokes,
     context: readContext(),
-    modes,
+    modes: requestedModes,
+    profile,
   });
 }
 
@@ -139,7 +146,7 @@ function receiveWorkerMessage(event: MessageEvent<WorkerResponse>): void {
   }
   if (message.id !== requestId) return;
   for (const item of message.results) renderResult(item.mode, item.result);
-  setStatus("완료");
+  setStatus(`완료 · 전체 ${(performance.now() - recognitionStartedAt).toFixed(0)}ms`);
 }
 
 function readContext(): RecognitionContext {

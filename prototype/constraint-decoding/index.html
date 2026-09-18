@@ -33,8 +33,8 @@
           >답안 형식<select id="answer-type">
             <option value="number">number</option>
             <option value="fraction">fraction</option>
-            <option value="expression">expression</option>
-            <option value="equation" selected>equation</option>
+            <option value="expression" selected>expression</option>
+            <option value="equation">equation</option>
             <option value="inequality">inequality</option>
             <option value="coordinate">coordinate</option>
             <option value="set">set</option>
@@ -50,7 +50,8 @@
         <canvas id="ink" aria-label="수식 필기 캔버스"></canvas>
         <div class="actions">
           <button id="clear" type="button">지우기</button
-          ><button id="recognize" type="button">지금 인식</button>
+          ><button id="compare" type="button">4모드 비교</button
+          ><button id="recognize" type="button">빠른 인식</button>
         </div>
       </section>
 
@@ -74,7 +75,7 @@
           <p class="alternatives"></p>
         </article>
         <article id="result-problem">
-          <h2>Problem hints</h2>
+          <h2>빠른 결과 · Problem hints</h2>
           <p class="latex">—</p>
           <p class="meta"></p>
           <p class="alternatives"></p>

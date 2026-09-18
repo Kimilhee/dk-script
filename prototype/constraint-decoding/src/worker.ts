@@ -41,12 +41,19 @@ async function handle(request: WorkerRequest): Promise<void> {
     const loadedRecognizer = recognizer;
     if (!loadedRecognizer) throw new Error("Model is not loaded");
     const memory = await loadedRecognizer.encode(request.strokes);
-    const results = await Promise.all(
-      request.modes.map(async (mode) => ({
+    const results = [];
+    for (const mode of request.modes) {
+      results.push({
         mode,
-        result: await loadedRecognizer.recognize(request.strokes, request.context, mode, memory),
-      })),
-    );
+        result: await loadedRecognizer.recognize(
+          request.strokes,
+          request.context,
+          mode,
+          memory,
+          request.profile === "fast" ? { beamSize: 1, maxLength: 24 } : undefined,
+        ),
+      });
+    }
     respond({ type: "results", id: request.id, results });
   } catch (error) {
     respond({
@@ -105,6 +112,7 @@ type WorkerRequest =
       strokes: Stroke[];
       context: RecognitionContext;
       modes: DecodeMode[];
+      profile: "fast" | "compare";
     };
 
 type WorkerResponse =

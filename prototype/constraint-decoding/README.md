@@ -35,7 +35,7 @@ vp run poc:prepare -- --accept-research-license --full
 vp run poc
 ```
 
-펜을 뗀 뒤 250ms가 지나면 네 모드를 같은 encoder memory로 디코딩한다. 개발 서버는 데스크톱 확인용이다. P580/P610의 Service Worker·설치·오프라인 검증은 production build를 HTTPS origin에 올려 수행한다.
+펜을 뗀 뒤 250ms가 지나면 `problem` 모드를 greedy decode하는 fast path를 실행한다. `4모드 비교` 버튼만 세 개 beam으로 네 모드를 순차 실행하므로 P580/P610의 일반 입력에는 사용하지 않는다. 화면의 `전체 Nms`가 캡처부터 결과 수신까지의 end-to-end 지연이다. 목표는 P580에서 200ms 이하지만, 현재 공개 baseline으로 달성됐다고 간주하지 않는다.
 
 ## GitHub Pages
 

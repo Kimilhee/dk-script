@@ -101,7 +101,8 @@ button {
   background: #0f766e;
   font-weight: 800;
 }
-button:first-child {
+#clear,
+#compare {
   color: #28384d;
   background: #dbe4ed;
 }
