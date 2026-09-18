@@ -50,7 +50,7 @@ async function handle(request: WorkerRequest): Promise<void> {
           request.context,
           mode,
           memory,
-          request.profile === "fast" ? { beamSize: 1, maxLength: 24 } : undefined,
+          request.profile === "fast" ? { beamSize: 3, maxLength: 48 } : undefined,
         ),
       });
     }

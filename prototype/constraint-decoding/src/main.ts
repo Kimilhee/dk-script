@@ -125,7 +125,7 @@ async function recognize(profile: "fast" | "compare"): Promise<void> {
   requestId += 1;
   recognitionStartedAt = performance.now();
   const requestedModes: DecodeMode[] = profile === "fast" ? ["problem"] : modes;
-  setStatus(profile === "fast" ? "빠른 인식 중…" : "네 모드 비교 중…");
+  setStatus(profile === "fast" ? "정확 인식 중…" : "네 모드 비교 중…");
   worker.postMessage({
     type: "recognize",
     id: requestId,
