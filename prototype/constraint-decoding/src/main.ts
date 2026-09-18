@@ -12,7 +12,7 @@ import type {
 
 const canvas = element<HTMLCanvasElement>("ink");
 const context2d = requireCanvasContext(canvas);
-const modes: DecodeMode[] = ["open", "level", "schema", "problem"];
+const modes: DecodeMode[] = ["problem", "open", "level", "schema"];
 const strokes: Stroke[] = [];
 let worker: Worker | undefined;
 let current: Stroke | undefined;
@@ -122,9 +122,13 @@ function clear(): void {
 
 async function recognize(profile: "fast" | "compare"): Promise<void> {
   if (!ready || !worker || strokes.length === 0) return;
+  window.clearTimeout(idleTimer);
   requestId += 1;
   recognitionStartedAt = performance.now();
   const requestedModes: DecodeMode[] = profile === "fast" ? ["problem"] : modes;
+  if (profile === "compare") {
+    for (const mode of modes) renderResult(mode);
+  }
   setStatus(profile === "fast" ? "정확 인식 중…" : "네 모드 비교 중…");
   worker.postMessage({
     type: "recognize",
@@ -132,7 +136,6 @@ async function recognize(profile: "fast" | "compare"): Promise<void> {
     strokes,
     context: readContext(),
     modes: requestedModes,
-    profile,
   });
 }
 
@@ -148,7 +151,15 @@ function receiveWorkerMessage(event: MessageEvent<WorkerResponse>): void {
     return;
   }
   if (message.id !== requestId) return;
-  for (const item of message.results) renderResult(item.mode, item.result);
+  if (message.type === "result") {
+    renderResult(message.mode, message.result);
+    if (message.total > 1) {
+      setStatus(
+        `비교 중 · ${message.completed}/${message.total} 완료 · 전체 ${(performance.now() - recognitionStartedAt).toFixed(0)}ms`,
+      );
+    }
+    return;
+  }
   setStatus(`완료 · 전체 ${(performance.now() - recognitionStartedAt).toFixed(0)}ms`);
 }
 
@@ -270,7 +281,11 @@ type WorkerResponse =
   | { type: "ready"; elapsedMs: number }
   | { type: "error"; id?: number; message: string }
   | {
-      type: "results";
+      type: "result";
       id: number;
-      results: Array<{ mode: DecodeMode; result: RecognitionResult }>;
-    };
+      mode: DecodeMode;
+      result: RecognitionResult;
+      completed: number;
+      total: number;
+    }
+  | { type: "complete"; id: number };

@@ -12,6 +12,7 @@ ort.env.wasm.numThreads = 1;
 ort.env.wasm.proxy = false;
 
 let recognizer: OrtRecognizer | undefined;
+let latestRequestId = 0;
 
 const localAssets = {
   vocab: `${import.meta.env.BASE_URL}models/vocab.json`,
@@ -38,23 +39,30 @@ async function handle(request: WorkerRequest): Promise<void> {
       respond({ type: "ready", elapsedMs: performance.now() - started });
       return;
     }
+    latestRequestId = request.id;
     const loadedRecognizer = recognizer;
     if (!loadedRecognizer) throw new Error("Model is not loaded");
     const memory = await loadedRecognizer.encode(request.strokes);
-    const results = [];
-    for (const mode of request.modes) {
-      results.push({
+    if (request.id !== latestRequestId) return;
+    for (const [index, mode] of request.modes.entries()) {
+      const result = await loadedRecognizer.recognize(
+        request.strokes,
+        request.context,
         mode,
-        result: await loadedRecognizer.recognize(
-          request.strokes,
-          request.context,
-          mode,
-          memory,
-          request.profile === "fast" ? { beamSize: 3, maxLength: 48 } : undefined,
-        ),
+        memory,
+        mode === "problem" ? { beamSize: 3, maxLength: 48 } : undefined,
+      );
+      if (request.id !== latestRequestId) return;
+      respond({
+        type: "result",
+        id: request.id,
+        mode,
+        result,
+        completed: index + 1,
+        total: request.modes.length,
       });
     }
-    respond({ type: "results", id: request.id, results });
+    respond({ type: "complete", id: request.id });
   } catch (error) {
     respond({
       type: "error",
@@ -112,17 +120,17 @@ type WorkerRequest =
       strokes: Stroke[];
       context: RecognitionContext;
       modes: DecodeMode[];
-      profile: "fast" | "compare";
     };
 
 type WorkerResponse =
   | { type: "ready"; elapsedMs: number }
   | {
-      type: "results";
+      type: "result";
       id: number;
-      results: Array<{
-        mode: DecodeMode;
-        result: Awaited<ReturnType<OrtRecognizer["recognize"]>>;
-      }>;
+      mode: DecodeMode;
+      result: Awaited<ReturnType<OrtRecognizer["recognize"]>>;
+      completed: number;
+      total: number;
     }
+  | { type: "complete"; id: number }
   | { type: "error"; id?: number; message: string };
