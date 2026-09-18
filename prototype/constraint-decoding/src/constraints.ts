@@ -125,6 +125,30 @@ const MATRIX_TOKENS = new Set([
   "_",
 ]);
 
+/**
+ * 제약 레이어가 허용할 수 있는 모든 토큰. `buildVocab`에 바로 넣을 수 있는 형태다.
+ *
+ * 연구용 모델의 `vocab.json`은 다운로드 자산이라 Git에 없다. 커리큘럼 자체를
+ * 검증하는 테스트는 연구 자산 없이도 돌아야 하므로 이 집합으로 vocab을 만든다.
+ * HIGH는 MIDDLE·ELEMENTARY를 누적 포함한다.
+ */
+export function curriculumTokens(): Record<string, string[]> {
+  return {
+    special: [...SPECIAL],
+    curriculum: [
+      ...new Set([
+        ...HIGH,
+        ...NUMBER_TOKENS,
+        ...FRACTION_TOKENS,
+        ...COORDINATE_TOKENS,
+        ...INTERVAL_TOKENS,
+        ...SET_TOKENS,
+        ...MATRIX_TOKENS,
+      ]),
+    ],
+  };
+}
+
 export interface PrefixState {
   braceDepth: number;
   tokens: string[];

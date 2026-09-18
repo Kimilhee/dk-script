@@ -1,9 +1,10 @@
 import katex from "katex";
 import "katex/dist/katex.min.css";
 import "./styles.css";
+import { canonicalizeLatex } from "./latex.ts";
+import { availableExercises, type PracticeExercise } from "./practice.ts";
 import type {
   AnswerType,
-  DecodeMode,
   RecognitionContext,
   RecognitionResult,
   SchoolLevel,
@@ -12,7 +13,6 @@ import type {
 
 const canvas = element<HTMLCanvasElement>("ink");
 const context2d = requireCanvasContext(canvas);
-const modes: DecodeMode[] = ["problem", "open", "level", "schema"];
 const strokes: Stroke[] = [];
 let worker: Worker | undefined;
 let current: Stroke | undefined;
@@ -20,18 +20,29 @@ let requestId = 0;
 let idleTimer: number | undefined;
 let ready = false;
 let recognitionStartedAt = 0;
+let exercises: PracticeExercise[] = [];
+let exerciseIndex = 0;
+let finished = false;
 
 resizeCanvas();
+resetPractice();
 window.addEventListener("resize", resizeCanvas);
 canvas.addEventListener("pointerdown", pointerDown);
 canvas.addEventListener("pointermove", pointerMove);
 canvas.addEventListener("pointerup", pointerUp);
 canvas.addEventListener("pointercancel", pointerUp);
 element<HTMLButtonElement>("clear").addEventListener("click", clear);
-element<HTMLButtonElement>("recognize").addEventListener("click", () => void recognize("fast"));
-element<HTMLButtonElement>("compare").addEventListener("click", () => void recognize("compare"));
 element<HTMLButtonElement>("export-sample").addEventListener("click", exportSample);
-setStatus("모델 로딩 중…");
+element<HTMLButtonElement>("mark-correct").addEventListener("click", markCorrect);
+element<HTMLButtonElement>("retry").addEventListener("click", clear);
+element<HTMLButtonElement>("next-exercise").addEventListener("click", nextExercise);
+element<HTMLButtonElement>("finish-practice").addEventListener("click", finishPractice);
+element<HTMLButtonElement>("restart-practice").addEventListener("click", restartPractice);
+element<HTMLSelectElement>("school-level").addEventListener("change", resetPractice);
+element<HTMLInputElement>("grade").addEventListener("change", resetPractice);
+element<HTMLInputElement>("variables").addEventListener("change", resetPractice);
+element<HTMLInputElement>("symbols").addEventListener("change", resetPractice);
+setStatus("인식 엔진 준비 중…");
 void initialize();
 
 async function initialize(): Promise<void> {
@@ -53,6 +64,10 @@ async function initialize(): Promise<void> {
 }
 
 function pointerDown(event: PointerEvent): void {
+  if (finished || !currentExercise()) return;
+  window.clearTimeout(idleTimer);
+  requestId += 1;
+  hideFeedback();
   canvas.setPointerCapture(event.pointerId);
   current = [];
   strokes.push(current);
@@ -74,7 +89,7 @@ function pointerUp(event: PointerEvent): void {
   current = undefined;
   redraw();
   window.clearTimeout(idleTimer);
-  idleTimer = window.setTimeout(() => void recognize("fast"), 250);
+  idleTimer = window.setTimeout(recognize, 250);
 }
 
 function appendPoint(event: PointerEvent): void {
@@ -113,29 +128,26 @@ function resizeCanvas(): void {
 }
 
 function clear(): void {
+  requestId += 1;
   strokes.splice(0);
   current = undefined;
   redraw();
-  for (const mode of modes) renderResult(mode);
-  setStatus(ready ? "준비됨" : "모델 로딩 중…");
+  renderResult();
+  hideFeedback();
+  setStatus(ready ? "준비됨" : "인식 엔진 준비 중…");
 }
 
-async function recognize(profile: "fast" | "compare"): Promise<void> {
+function recognize(): void {
   if (!ready || !worker || strokes.length === 0) return;
   window.clearTimeout(idleTimer);
   requestId += 1;
   recognitionStartedAt = performance.now();
-  const requestedModes: DecodeMode[] = profile === "fast" ? ["problem"] : modes;
-  if (profile === "compare") {
-    for (const mode of modes) renderResult(mode);
-  }
-  setStatus(profile === "fast" ? "정확 인식 중…" : "네 모드 비교 중…");
+  setStatus("인식 중…");
   worker.postMessage({
     type: "recognize",
     id: requestId,
     strokes,
-    context: readContext(),
-    modes: requestedModes,
+    context: exerciseContext(),
   });
 }
 
@@ -143,21 +155,20 @@ function receiveWorkerMessage(event: MessageEvent<WorkerResponse>): void {
   const message = event.data;
   if (message.type === "ready") {
     ready = true;
-    setStatus(`준비됨 · cold start ${message.elapsedMs.toFixed(0)}ms`);
+    setStatus(`준비됨 · 엔진 초기화 ${message.elapsedMs.toFixed(0)}ms`);
     return;
   }
   if (message.type === "error") {
+    if (message.id !== undefined && message.id !== requestId) return;
     setStatus(`오류: ${message.message}`);
     return;
   }
   if (message.id !== requestId) return;
   if (message.type === "result") {
-    renderResult(message.mode, message.result);
-    if (message.total > 1) {
-      setStatus(
-        `비교 중 · ${message.completed}/${message.total} 완료 · 전체 ${(performance.now() - recognitionStartedAt).toFixed(0)}ms`,
-      );
-    }
+    renderResult(message.result);
+    showFeedback(
+      canonicalizeLatex(message.result.latex) === canonicalizeLatex(currentExercise()?.latex ?? ""),
+    );
     return;
   }
   setStatus(`완료 · 전체 ${(performance.now() - recognitionStartedAt).toFixed(0)}ms`);
@@ -177,6 +188,94 @@ function readContext(): RecognitionContext {
   };
 }
 
+function exerciseContext(): RecognitionContext {
+  const exercise = currentExercise();
+  const context = readContext();
+  if (!exercise) return context;
+  element<HTMLSelectElement>("answer-type").value = exercise.answerType;
+  element<HTMLInputElement>("subject").value = exercise.subject;
+  element<HTMLInputElement>("unit").value = exercise.unit;
+  return { ...context, answerType: exercise.answerType };
+}
+
+function resetPractice(): void {
+  exercises = availableExercises(readContext());
+  exerciseIndex = 0;
+  finished = false;
+  element<HTMLElement>("practice-finished").hidden = true;
+  renderExercise();
+  clear();
+}
+
+function renderExercise(): void {
+  const exercise = currentExercise();
+  const prompt = element<HTMLElement>("exercise-prompt");
+  if (!exercise) {
+    prompt.hidden = true;
+    element<HTMLElement>("no-exercises").hidden = false;
+    element<HTMLElement>("practice-feedback").hidden = true;
+    return;
+  }
+  prompt.hidden = false;
+  element<HTMLElement>("no-exercises").hidden = true;
+  element<HTMLElement>("exercise-count").textContent = `${exerciseIndex + 1} / ${exercises.length}`;
+  renderLatex(element<HTMLElement>("exercise-latex"), exercise.latex);
+  element<HTMLSelectElement>("answer-type").value = exercise.answerType;
+  element<HTMLInputElement>("subject").value = exercise.subject;
+  element<HTMLInputElement>("unit").value = exercise.unit;
+  hideFeedback();
+}
+
+function currentExercise(): PracticeExercise | undefined {
+  return exercises[exerciseIndex];
+}
+
+function nextExercise(): void {
+  if (exercises.length === 0) return;
+  exerciseIndex = (exerciseIndex + 1) % exercises.length;
+  finished = false;
+  renderExercise();
+  clear();
+}
+
+function finishPractice(): void {
+  finished = true;
+  element<HTMLElement>("practice-feedback").hidden = true;
+  element<HTMLElement>("practice-finished").hidden = false;
+  setStatus("연습을 마쳤습니다");
+}
+
+function restartPractice(): void {
+  element<HTMLElement>("practice-finished").hidden = true;
+  resetPractice();
+}
+
+function showFeedback(matches: boolean): void {
+  if (finished) return;
+  const feedback = element<HTMLElement>("practice-feedback");
+  feedback.hidden = false;
+  element<HTMLElement>("feedback-message").textContent = matches
+    ? "정답이에요! 다음 수식으로 넘어갈까요?"
+    : "제시한 수식과 다르게 인식했어요. 다시 쓰거나 정답으로 확인해 주세요.";
+  element<HTMLButtonElement>("mark-correct").hidden = matches;
+  element<HTMLButtonElement>("retry").hidden = matches;
+  element<HTMLButtonElement>("next-exercise").hidden = !matches;
+  element<HTMLButtonElement>("finish-practice").hidden = !matches;
+}
+
+function markCorrect(): void {
+  element<HTMLElement>("feedback-message").textContent =
+    "정답으로 표시했어요. 다음 수식으로 넘어갈까요?";
+  element<HTMLButtonElement>("mark-correct").hidden = true;
+  element<HTMLButtonElement>("retry").hidden = true;
+  element<HTMLButtonElement>("next-exercise").hidden = false;
+  element<HTMLButtonElement>("finish-practice").hidden = false;
+}
+
+function hideFeedback(): void {
+  element<HTMLElement>("practice-feedback").hidden = true;
+}
+
 function splitInput(id: string): string[] | undefined {
   const values = element<HTMLInputElement>(id)
     .value.split(",")
@@ -185,8 +284,8 @@ function splitInput(id: string): string[] | undefined {
   return values.length > 0 ? values : undefined;
 }
 
-function renderResult(mode: DecodeMode, result?: RecognitionResult): void {
-  const card = element<HTMLElement>(`result-${mode}`);
+function renderResult(result?: RecognitionResult): void {
+  const card = element<HTMLElement>("result-problem");
   const latex = card.querySelector<HTMLElement>(".latex")!;
   const alternatives = card.querySelector<HTMLElement>(".alternatives")!;
   if (!result) {
@@ -283,9 +382,6 @@ type WorkerResponse =
   | {
       type: "result";
       id: number;
-      mode: DecodeMode;
       result: RecognitionResult;
-      completed: number;
-      total: number;
     }
   | { type: "complete"; id: number };

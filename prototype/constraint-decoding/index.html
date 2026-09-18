@@ -12,11 +12,23 @@
       <header>
         <div>
           <p class="eyebrow">RESEARCH-ONLY THROWAWAY PROTOTYPE</p>
-          <h1>교육과정 제약 효과 비교</h1>
-          <p>같은 필기와 모델을 고정하고 decoder 제약만 바꿉니다.</p>
+          <h1>온디바이스 수식 필기 인식</h1>
+          <p>수식을 쓰고 잠시 멈추면 문제 메타데이터를 반영해 자동으로 변환합니다.</p>
         </div>
         <output id="status">초기화 중…</output>
       </header>
+
+      <section id="exercise-prompt" class="exercise" aria-label="따라 쓸 수식">
+        <div>
+          <p class="eyebrow">따라 써 보세요 <span id="exercise-count"></span></p>
+          <div id="exercise-latex" class="exercise-latex"></div>
+        </div>
+        <p>수식을 따라 쓴 뒤 펜을 잠시 떼면 자동으로 인식합니다.</p>
+      </section>
+      <p id="no-exercises" class="notice" hidden>
+        선택한 학교급·학년과 허용 기호에 맞는 연습 수식이 없습니다. 학년이나 허용 기호를 확인해
+        주세요.
+      </p>
 
       <section class="controls" aria-label="문제 메타데이터">
         <label
@@ -49,37 +61,30 @@
       <section class="drawing">
         <canvas id="ink" aria-label="수식 필기 캔버스"></canvas>
         <div class="actions">
-          <button id="clear" type="button">지우기</button
-          ><button id="compare" type="button">4모드 비교</button
-          ><button id="recognize" type="button">정확 인식</button>
+          <button id="clear" type="button">지우기</button>
         </div>
       </section>
 
-      <section class="results" aria-label="디코딩 비교 결과">
+      <section class="results" aria-label="인식 결과">
         <article id="result-problem">
-          <h2>기본 결과 · Problem hints</h2>
+          <h2>인식 결과</h2>
           <div class="latex">—</div>
           <p class="meta"></p>
           <p class="alternatives"></p>
         </article>
-        <article id="result-open">
-          <h2>Open</h2>
-          <div class="latex">—</div>
-          <p class="meta"></p>
-          <p class="alternatives"></p>
-        </article>
-        <article id="result-level">
-          <h2>Level mask</h2>
-          <div class="latex">—</div>
-          <p class="meta"></p>
-          <p class="alternatives"></p>
-        </article>
-        <article id="result-schema">
-          <h2>Schema grammar</h2>
-          <div class="latex">—</div>
-          <p class="meta"></p>
-          <p class="alternatives"></p>
-        </article>
+      </section>
+      <section id="practice-feedback" class="practice-feedback" aria-live="polite" hidden>
+        <p id="feedback-message"></p>
+        <div class="feedback-actions">
+          <button id="mark-correct" type="button">표현이 달라도 맞아요</button>
+          <button id="retry" type="button">다시 써보기</button>
+          <button id="next-exercise" type="button" hidden>다음 수식</button>
+          <button id="finish-practice" type="button" hidden>여기서 마치기</button>
+        </div>
+      </section>
+      <section id="practice-finished" class="practice-finished" hidden>
+        <p>연습을 마쳤습니다.</p>
+        <button id="restart-practice" type="button">다시 시작</button>
       </section>
       <section class="collection" aria-label="학습 샘플 내보내기">
         <div>

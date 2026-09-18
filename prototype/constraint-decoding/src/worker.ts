@@ -6,7 +6,7 @@ import {
   type RuntimeSession,
   type RuntimeTensor,
 } from "./ort-runner.ts";
-import type { DecodeMode, RecognitionContext, Stroke } from "./types.ts";
+import type { RecognitionContext, Stroke } from "./types.ts";
 
 ort.env.wasm.numThreads = 1;
 ort.env.wasm.proxy = false;
@@ -44,24 +44,15 @@ async function handle(request: WorkerRequest): Promise<void> {
     if (!loadedRecognizer) throw new Error("Model is not loaded");
     const memory = await loadedRecognizer.encode(request.strokes);
     if (request.id !== latestRequestId) return;
-    for (const [index, mode] of request.modes.entries()) {
-      const result = await loadedRecognizer.recognize(
-        request.strokes,
-        request.context,
-        mode,
-        memory,
-        mode === "problem" ? { beamSize: 3, maxLength: 48 } : undefined,
-      );
-      if (request.id !== latestRequestId) return;
-      respond({
-        type: "result",
-        id: request.id,
-        mode,
-        result,
-        completed: index + 1,
-        total: request.modes.length,
-      });
-    }
+    const result = await loadedRecognizer.recognize(
+      request.strokes,
+      request.context,
+      "problem",
+      memory,
+      { beamSize: 2, maxLength: 48 },
+    );
+    if (request.id !== latestRequestId) return;
+    respond({ type: "result", id: request.id, result });
     respond({ type: "complete", id: request.id });
   } catch (error) {
     respond({
@@ -119,7 +110,6 @@ type WorkerRequest =
       id: number;
       strokes: Stroke[];
       context: RecognitionContext;
-      modes: DecodeMode[];
     };
 
 type WorkerResponse =
@@ -127,10 +117,7 @@ type WorkerResponse =
   | {
       type: "result";
       id: number;
-      mode: DecodeMode;
       result: Awaited<ReturnType<OrtRecognizer["recognize"]>>;
-      completed: number;
-      total: number;
     }
   | { type: "complete"; id: number }
   | { type: "error"; id?: number; message: string };

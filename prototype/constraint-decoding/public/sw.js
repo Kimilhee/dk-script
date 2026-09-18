@@ -1,4 +1,6 @@
-const CACHE = "constraint-decoding-poc-v6";
+const SHELL_CACHE = "constraint-decoding-poc-v6";
+const SHELL_CACHE_PREFIX = "constraint-decoding-poc-";
+const MODEL_CACHE = "constraint-decoding-models-v1";
 const BASE = new URL("./", self.location.href).pathname;
 const SHELL_FILES = [BASE, `${BASE}manifest.webmanifest`, `${BASE}icon.svg`];
 const MODEL_PATHS = [
@@ -25,7 +27,11 @@ self.addEventListener("activate", (event) => {
     caches
       .keys()
       .then((keys) =>
-        Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key))),
+        Promise.all(
+          keys
+            .filter((key) => key.startsWith(SHELL_CACHE_PREFIX) && key !== SHELL_CACHE)
+            .map((key) => caches.delete(key)),
+        ),
       ),
   );
   self.clients.claim();
@@ -39,10 +45,13 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== self.location.origin && !isModel) return;
   const cacheFirst = isModel || url.pathname.includes("ort-wasm");
   event.respondWith(
-    caches.open(CACHE).then(async (cache) => {
+    caches.open(cacheFirst ? MODEL_CACHE : SHELL_CACHE).then(async (cache) => {
       if (cacheFirst) {
-        const cached = await cache.match(event.request);
-        if (cached) return cached;
+        const cached = (await cache.match(event.request)) ?? (await caches.match(event.request));
+        if (cached) {
+          await cache.put(event.request, cached.clone());
+          return cached;
+        }
       }
       try {
         const response = await fetch(event.request);
@@ -58,7 +67,7 @@ self.addEventListener("fetch", (event) => {
 });
 
 async function cacheShell() {
-  const cache = await caches.open(CACHE);
+  const cache = await caches.open(SHELL_CACHE);
   await cache.addAll(SHELL_FILES);
   const response = await cache.match(BASE);
   if (!response) return;
