@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#10243f" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <title>Constraint Decoding PoC</title>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div>
+          <p class="eyebrow">RESEARCH-ONLY THROWAWAY PROTOTYPE</p>
+          <h1>교육과정 제약 효과 비교</h1>
+          <p>같은 필기와 모델을 고정하고 decoder 제약만 바꿉니다.</p>
+        </div>
+        <output id="status">초기화 중…</output>
+      </header>
+
+      <section class="controls" aria-label="문제 메타데이터">
+        <label
+          >학교급<select id="school-level">
+            <option value="elementary">초등</option>
+            <option value="middle" selected>중등</option>
+            <option value="high">고등</option>
+          </select></label
+        >
+        <label>학년<input id="grade" type="number" min="1" max="12" value="9" /></label>
+        <label>과목<input id="subject" value="algebra" /></label>
+        <label>단원<input id="unit" value="equation" /></label>
+        <label
+          >답안 형식<select id="answer-type">
+            <option value="number">number</option>
+            <option value="fraction">fraction</option>
+            <option value="expression">expression</option>
+            <option value="equation" selected>equation</option>
+            <option value="inequality">inequality</option>
+            <option value="coordinate">coordinate</option>
+            <option value="set">set</option>
+            <option value="interval">interval</option>
+            <option value="matrix">matrix</option>
+          </select></label
+        >
+        <label>허용 변수<input id="variables" value="x" placeholder="x,y" /></label>
+        <label>허용 기호<input id="symbols" placeholder="\\sqrt,\\pi" /></label>
+      </section>
+
+      <section class="drawing">
+        <canvas id="ink" aria-label="수식 필기 캔버스"></canvas>
+        <div class="actions">
+          <button id="clear" type="button">지우기</button
+          ><button id="recognize" type="button">지금 인식</button>
+        </div>
+      </section>
+
+      <section class="results" aria-label="디코딩 비교 결과">
+        <article id="result-open">
+          <h2>Open</h2>
+          <p class="latex">—</p>
+          <p class="meta"></p>
+          <p class="alternatives"></p>
+        </article>
+        <article id="result-level">
+          <h2>Level mask</h2>
+          <p class="latex">—</p>
+          <p class="meta"></p>
+          <p class="alternatives"></p>
+        </article>
+        <article id="result-schema">
+          <h2>Schema grammar</h2>
+          <p class="latex">—</p>
+          <p class="meta"></p>
+          <p class="alternatives"></p>
+        </article>
+        <article id="result-problem">
+          <h2>Problem hints</h2>
+          <p class="latex">—</p>
+          <p class="meta"></p>
+          <p class="alternatives"></p>
+        </article>
+      </section>
+      <footer>
+        비상업적 연구용 PoC ·
+        <a href="https://huggingface.co/m4jkiuwr/htt-mini">Hand-to-TeX 모델</a> ·
+        <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">MathWriting CC BY-NC-SA 4.0</a>
+      </footer>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

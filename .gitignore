@@ -1,0 +1,21 @@
+node_modules
+dist
+prototype/constraint-decoding/dist
+prototype/constraint-decoding/public/models/*
+!prototype/constraint-decoding/public/models/.gitkeep
+prototype/constraint-decoding/data/*
+!prototype/constraint-decoding/data/.gitkeep
+prototype/constraint-decoding/reports/*.json
+prototype/constraint-decoding/reports/*.md
+!prototype/constraint-decoding/reports/NOTES.md
+.poc-cache
+*.log
+.DS_Store
+!.vscode/
+!.vscode/settings.json
+!.vscode/extensions.json
+
+# dotenv environment variable files
+.env
+.env.*
+!.env.example
