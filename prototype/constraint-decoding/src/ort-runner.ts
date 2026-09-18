@@ -1,5 +1,6 @@
 import { constrainedBeamSearch } from "./beam.ts";
 import { extractFeatures } from "./features.ts";
+import { type ResampleOptions, resampleStrokes } from "./resample.ts";
 import type { DecodeMode, RecognitionContext, RecognitionResult, Stroke, Vocab } from "./types.ts";
 
 type TensorData = Float32Array | BigInt64Array | Uint8Array;
@@ -51,8 +52,15 @@ export class OrtRecognizer {
     this.vocab = vocab;
   }
 
-  async encode(strokes: Stroke[]): Promise<Memory> {
-    const features = extractFeatures(strokes);
+  /**
+   * 획을 인코더 memory로 바꾼다.
+   *
+   * `resample`을 `false`로 주면 원시 샘플을 그대로 넣는다. A/B 측정용이며
+   * 실사용에서는 쓰지 마라 — 입력 장치 샘플레이트가 그대로 비용이 된다.
+   */
+  async encode(strokes: Stroke[], resample: ResampleOptions | false = {}): Promise<Memory> {
+    const prepared = resample === false ? strokes : resampleStrokes(strokes, resample);
+    const features = extractFeatures(prepared);
     if (features.points === 0) throw new Error("Draw at least one stroke before recognition");
     const results = await this.encoder.run({
       src: this.runtime.tensor("float32", features.data, [1, features.points, features.dimensions]),
