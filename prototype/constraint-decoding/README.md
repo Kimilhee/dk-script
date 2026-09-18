@@ -37,6 +37,8 @@ vp run poc
 
 펜을 뗀 뒤 250ms가 지나면 `problem` 모드를 greedy decode하는 fast path를 실행한다. `4모드 비교` 버튼만 세 개 beam으로 네 모드를 순차 실행하므로 P580/P610의 일반 입력에는 사용하지 않는다. 화면의 `전체 Nms`가 캡처부터 결과 수신까지의 end-to-end 지연이다. 목표는 P580에서 200ms 이하지만, 현재 공개 baseline으로 달성됐다고 간주하지 않는다.
 
+네 결과 카드와 대안 후보는 KaTeX로 렌더링하며 원본 LaTeX는 요소의 `title`에 남긴다. 자체 모델용 표본은 사용자가 정답 LaTeX를 확인·수정한 뒤 `InkML 다운로드`로 기기에만 저장할 수 있다. 자동 업로드나 영속 저장은 없다.
+
 ## GitHub Pages
 
 `main`에 push하면 `.github/workflows/pages.yml`이 정적 앱을 빌드하고 Pages에 배포한다. 저장소 이름으로 base path를 자동 구성하므로 `/dk-script/` 같은 project page에서도 동작한다.

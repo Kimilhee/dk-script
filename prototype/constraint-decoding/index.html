@@ -58,28 +58,41 @@
       <section class="results" aria-label="디코딩 비교 결과">
         <article id="result-open">
           <h2>Open</h2>
-          <p class="latex">—</p>
+          <div class="latex">—</div>
           <p class="meta"></p>
           <p class="alternatives"></p>
         </article>
         <article id="result-level">
           <h2>Level mask</h2>
-          <p class="latex">—</p>
+          <div class="latex">—</div>
           <p class="meta"></p>
           <p class="alternatives"></p>
         </article>
         <article id="result-schema">
           <h2>Schema grammar</h2>
-          <p class="latex">—</p>
+          <div class="latex">—</div>
           <p class="meta"></p>
           <p class="alternatives"></p>
         </article>
         <article id="result-problem">
           <h2>빠른 결과 · Problem hints</h2>
-          <p class="latex">—</p>
+          <div class="latex">—</div>
           <p class="meta"></p>
           <p class="alternatives"></p>
         </article>
+      </section>
+      <section class="collection" aria-label="학습 샘플 내보내기">
+        <div>
+          <h2>자체 데이터 샘플</h2>
+          <p>
+            인식 결과를 확인·수정한 LaTeX와 현재 원본 획을 InkML로 저장합니다. 서버로 전송하지
+            않습니다.
+          </p>
+        </div>
+        <label
+          >확정 LaTeX<input id="confirmed-latex" placeholder="예: x^2+1" autocomplete="off"
+        /></label>
+        <button id="export-sample" type="button">InkML 다운로드</button>
       </section>
       <footer>
         비상업적 연구용 PoC ·

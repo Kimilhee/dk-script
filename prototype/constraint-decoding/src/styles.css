@@ -127,11 +127,14 @@ h2 {
   font-size: 14px;
 }
 .latex {
+  display: grid;
+  align-items: center;
   min-height: 48px;
-  overflow-wrap: anywhere;
-  font:
-    700 19px/1.4 ui-monospace,
-    monospace;
+  overflow-x: auto;
+  padding: 5px 0;
+}
+.latex .katex-display {
+  margin: 0;
 }
 .meta,
 .alternatives {
@@ -139,6 +142,36 @@ h2 {
   color: #68778a;
   font-size: 12px;
   overflow-wrap: anywhere;
+}
+.alternatives {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+}
+.alternatives > span:not(:last-child)::after {
+  margin-left: 12px;
+  color: #a2afbd;
+  content: "·";
+}
+.collection {
+  display: grid;
+  grid-template-columns: 1fr minmax(240px, 2fr) auto;
+  gap: 12px;
+  align-items: end;
+  margin-top: 12px;
+  padding: 15px;
+  border: 1px solid #cbd5e1;
+  border-radius: 13px;
+  background: #fff;
+}
+.collection h2,
+.collection p {
+  margin: 0;
+}
+.collection p {
+  margin-top: 5px;
+  color: #68778a;
+  font-size: 12px;
 }
 footer {
   margin-top: 20px;
@@ -163,5 +196,8 @@ footer a {
   }
   .results {
     grid-template-columns: repeat(2, 1fr);
+  }
+  .collection {
+    grid-template-columns: 1fr;
   }
 }

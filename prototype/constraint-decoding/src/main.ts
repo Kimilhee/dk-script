@@ -1,3 +1,5 @@
+import katex from "katex";
+import "katex/dist/katex.min.css";
 import "./styles.css";
 import type {
   AnswerType,
@@ -28,6 +30,7 @@ canvas.addEventListener("pointercancel", pointerUp);
 element<HTMLButtonElement>("clear").addEventListener("click", clear);
 element<HTMLButtonElement>("recognize").addEventListener("click", () => void recognize("fast"));
 element<HTMLButtonElement>("compare").addEventListener("click", () => void recognize("compare"));
+element<HTMLButtonElement>("export-sample").addEventListener("click", exportSample);
 setStatus("모델 로딩 중…");
 void initialize();
 
@@ -173,18 +176,78 @@ function splitInput(id: string): string[] | undefined {
 
 function renderResult(mode: DecodeMode, result?: RecognitionResult): void {
   const card = element<HTMLElement>(`result-${mode}`);
+  const latex = card.querySelector<HTMLElement>(".latex")!;
+  const alternatives = card.querySelector<HTMLElement>(".alternatives")!;
   if (!result) {
-    card.querySelector(".latex")!.textContent = "—";
+    latex.textContent = "—";
+    latex.removeAttribute("title");
     card.querySelector(".meta")!.textContent = "";
-    card.querySelector(".alternatives")!.textContent = "";
+    alternatives.replaceChildren();
     return;
   }
-  card.querySelector(".latex")!.textContent = result.latex || "∅";
+  renderLatex(latex, result.latex);
   card.querySelector(".meta")!.textContent =
     `${result.elapsedMs.toFixed(0)}ms · confidence ${(result.confidence * 100).toFixed(1)}%`;
-  card.querySelector(".alternatives")!.textContent = result.alternatives
-    .map((item) => item.latex)
-    .join(" · ");
+  alternatives.replaceChildren(
+    ...result.alternatives.map((item) => {
+      const candidate = document.createElement("span");
+      renderLatex(candidate, item.latex, false);
+      return candidate;
+    }),
+  );
+}
+
+function renderLatex(target: HTMLElement, value: string, displayMode = true): void {
+  const latex = value || "\\varnothing";
+  target.title = value;
+  katex.render(latex, target, {
+    displayMode,
+    throwOnError: false,
+    strict: "ignore",
+    trust: false,
+  });
+}
+
+function exportSample(): void {
+  const truth = element<HTMLInputElement>("confirmed-latex").value.trim();
+  if (strokes.length === 0) {
+    setStatus("내보낼 필기가 없습니다");
+    return;
+  }
+  if (!truth) {
+    setStatus("확정 LaTeX를 입력하세요");
+    return;
+  }
+
+  const context = readContext();
+  const traces = strokes
+    .map(
+      (stroke, index) =>
+        `<trace id="${index}">${stroke.map((point) => `${point.x.toFixed(2)} ${point.y.toFixed(2)} ${point.t.toFixed(2)}`).join(", ")}</trace>`,
+    )
+    .join("\n  ");
+  const inkml = `<?xml version="1.0" encoding="UTF-8"?>
+<ink xmlns="http://www.w3.org/2003/InkML">
+  <annotation type="label">${escapeXml(truth)}</annotation>
+  <annotation type="context">${escapeXml(JSON.stringify(context))}</annotation>
+  ${traces}
+</ink>\n`;
+  const url = URL.createObjectURL(new Blob([inkml], { type: "application/inkml+xml" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `math-sample-${new Date().toISOString().replaceAll(":", "-")}.inkml`;
+  link.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
+  setStatus("학습 샘플을 로컬에 저장했습니다");
+}
+
+function escapeXml(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&apos;");
 }
 
 function setStatus(value: string): void {

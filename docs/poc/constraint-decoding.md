@@ -1,6 +1,6 @@
 # Constraint decoding PoC
 
-상태: 구현 완료, 연구 자산 다운로드와 P580/P610 실측 대기.
+상태: Hand-to-TeX production 후보 탈락. 자체 데이터 수집과 비자기회귀 소형 모델 실험으로 이동.
 
 ## 질문
 
@@ -16,8 +16,19 @@
 
 ## 결과
 
-아직 실행하지 않았다. 법무 승인 후 `vp run poc:prepare -- --accept-research-license --full`과 `vp run poc:batch`를 실행하고, 두 실기기 결과를 함께 기록한다.
+공식 excerpt 100개 중 현재 curriculum/profile에 매핑 가능한 26개를 탐색적으로 측정했다.
+
+| Mode    | Exact | Top-3 |
+| ------- | ----: | ----: |
+| open    | 53.8% | 76.9% |
+| level   | 57.7% | 73.1% |
+| schema  | 57.7% | 73.1% |
+| problem | 73.1% | 80.8% |
+
+표본이 작고 K–12 대표성이 없으므로 production 정확도 추정치는 아니다. 하지만 P580에서 `x+1` 같은 짧은 입력의 4모드 beam decode가 약 1분 걸렸고, greedy fast path도 사용자가 수용할 정확도에 도달하지 못했다.
 
 ## 결정
 
-결과 검토 전에는 production 아키텍처를 확정하지 않는다. 유망한 경우에만 기존 MyScript 앱의 opt-in 데이터 수집과 modular/joint model 비교로 이동한다.
+교육과정 제약은 open 대비 오류를 줄였지만 목표 정확도 93–97%와 P580 200ms 목표를 동시에 만족시키지 못했다. Hand-to-TeX와 현재 자기회귀 decoder는 production 후보에서 제외한다.
+
+다음 실험은 서버 업로드 없이 사용자 확정 LaTeX와 원본 획을 InkML로 내보내는 수집 경로를 먼저 검증한다. 이후 작은 심볼 분류기 + 공간 parser 또는 단일 forward-pass 모델을 동일한 P580 지연 기준으로 비교한다.

@@ -1,4 +1,4 @@
-const CACHE = "constraint-decoding-poc-v3";
+const CACHE = "constraint-decoding-poc-v4";
 const BASE = new URL("./", self.location.href).pathname;
 const SHELL_FILES = [BASE, `${BASE}manifest.webmanifest`, `${BASE}icon.svg`];
 const MODEL_PATHS = [
