@@ -13,55 +13,28 @@
         <div>
           <p class="eyebrow">RESEARCH-ONLY THROWAWAY PROTOTYPE</p>
           <h1>온디바이스 수식 필기 인식</h1>
-          <p>수식을 쓰고 잠시 멈추면 문제 메타데이터를 반영해 자동으로 변환합니다.</p>
+          <p>학교급을 고르고 예제를 따라 쓴 뒤 변환하세요.</p>
         </div>
         <output id="status">초기화 중…</output>
       </header>
 
       <section id="exercise-prompt" class="exercise" aria-label="따라 쓸 수식">
-        <div>
-          <p class="eyebrow">따라 써 보세요 <span id="exercise-count"></span></p>
-          <div id="exercise-latex" class="exercise-latex"></div>
-        </div>
-        <p>수식을 따라 쓴 뒤 펜을 잠시 떼면 자동으로 인식합니다.</p>
+        <strong>따라 쓰기</strong>
+        <div id="exercise-latex" class="exercise-latex"></div>
+        <span id="exercise-count" class="exercise-count"></span>
       </section>
-      <p id="no-exercises" class="notice" hidden>
-        선택한 학교급·학년과 허용 기호에 맞는 연습 수식이 없습니다. 학년이나 허용 기호를 확인해
-        주세요.
-      </p>
-
-      <section class="controls" aria-label="문제 메타데이터">
-        <label
-          >학교급<select id="school-level">
-            <option value="elementary">초등</option>
-            <option value="middle" selected>중등</option>
-            <option value="high">고등</option>
-          </select></label
-        >
-        <label>학년<input id="grade" type="number" min="1" max="12" value="9" /></label>
-        <label>과목<input id="subject" value="algebra" /></label>
-        <label>단원<input id="unit" value="equation" /></label>
-        <label
-          >답안 형식<select id="answer-type">
-            <option value="number">number</option>
-            <option value="fraction">fraction</option>
-            <option value="expression" selected>expression</option>
-            <option value="equation">equation</option>
-            <option value="inequality">inequality</option>
-            <option value="coordinate">coordinate</option>
-            <option value="set">set</option>
-            <option value="interval">interval</option>
-            <option value="matrix">matrix</option>
-          </select></label
-        >
-        <label>허용 변수<input id="variables" placeholder="예: x,y 또는 비워두기" /></label>
-        <label>허용 기호<input id="symbols" placeholder="\\sqrt,\\pi" /></label>
-      </section>
+      <p id="no-exercises" class="notice" hidden>이 학교급에서 사용할 연습 수식이 없습니다.</p>
+      <nav id="level-picker" class="level-picker" aria-label="학교급 선택">
+        <button type="button" data-level="elementary" aria-pressed="false">초등</button>
+        <button type="button" data-level="middle" aria-pressed="true">중등</button>
+        <button type="button" data-level="high" aria-pressed="false">고등</button>
+      </nav>
 
       <section class="drawing">
         <canvas id="ink" aria-label="수식 필기 캔버스"></canvas>
         <div class="actions">
           <button id="clear" type="button">지우기</button>
+          <button id="convert" type="button" disabled>변환</button>
         </div>
       </section>
 
@@ -85,19 +58,6 @@
       <section id="practice-finished" class="practice-finished" hidden>
         <p>연습을 마쳤습니다.</p>
         <button id="restart-practice" type="button">다시 시작</button>
-      </section>
-      <section class="collection" aria-label="학습 샘플 내보내기">
-        <div>
-          <h2>자체 데이터 샘플</h2>
-          <p>
-            인식 결과를 확인·수정한 LaTeX와 현재 원본 획을 InkML로 저장합니다. 서버로 전송하지
-            않습니다.
-          </p>
-        </div>
-        <label
-          >확정 LaTeX<input id="confirmed-latex" placeholder="예: x^2+1" autocomplete="off"
-        /></label>
-        <button id="export-sample" type="button">InkML 다운로드</button>
       </section>
       <footer>
         비상업적 연구용 PoC ·

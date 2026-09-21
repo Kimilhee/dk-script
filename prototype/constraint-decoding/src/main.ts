@@ -17,14 +17,16 @@ const strokes: Stroke[] = [];
 let worker: Worker | undefined;
 let current: Stroke | undefined;
 let requestId = 0;
-let idleTimer: number | undefined;
 let ready = false;
+let converting = false;
 let recognitionStartedAt = 0;
 let exercises: PracticeExercise[] = [];
 let exerciseIndex = 0;
 let finished = false;
+let schoolLevel: SchoolLevel = "middle";
 
 resizeCanvas();
+updateLevelButtons();
 resetPractice();
 window.addEventListener("resize", resizeCanvas);
 canvas.addEventListener("pointerdown", pointerDown);
@@ -32,16 +34,20 @@ canvas.addEventListener("pointermove", pointerMove);
 canvas.addEventListener("pointerup", pointerUp);
 canvas.addEventListener("pointercancel", pointerUp);
 element<HTMLButtonElement>("clear").addEventListener("click", clear);
-element<HTMLButtonElement>("export-sample").addEventListener("click", exportSample);
+element<HTMLButtonElement>("convert").addEventListener("click", recognize);
 element<HTMLButtonElement>("mark-correct").addEventListener("click", markCorrect);
 element<HTMLButtonElement>("retry").addEventListener("click", clear);
 element<HTMLButtonElement>("next-exercise").addEventListener("click", nextExercise);
 element<HTMLButtonElement>("finish-practice").addEventListener("click", finishPractice);
 element<HTMLButtonElement>("restart-practice").addEventListener("click", restartPractice);
-element<HTMLSelectElement>("school-level").addEventListener("change", resetPractice);
-element<HTMLInputElement>("grade").addEventListener("change", resetPractice);
-element<HTMLInputElement>("variables").addEventListener("change", resetPractice);
-element<HTMLInputElement>("symbols").addEventListener("change", resetPractice);
+element<HTMLElement>("level-picker").addEventListener("click", (event) => {
+  if (converting) return;
+  const button = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-level]");
+  if (!button) return;
+  schoolLevel = button.dataset.level as SchoolLevel;
+  updateLevelButtons();
+  resetPractice();
+});
 setStatus("인식 엔진 준비 중…");
 void initialize();
 
@@ -64,8 +70,7 @@ async function initialize(): Promise<void> {
 }
 
 function pointerDown(event: PointerEvent): void {
-  if (finished || !currentExercise()) return;
-  window.clearTimeout(idleTimer);
+  if (finished || converting || !currentExercise()) return;
   requestId += 1;
   hideFeedback();
   canvas.setPointerCapture(event.pointerId);
@@ -88,8 +93,6 @@ function pointerUp(event: PointerEvent): void {
   appendPoint(event);
   current = undefined;
   redraw();
-  window.clearTimeout(idleTimer);
-  idleTimer = window.setTimeout(recognize, 250);
 }
 
 function appendPoint(event: PointerEvent): void {
@@ -128,6 +131,7 @@ function resizeCanvas(): void {
 }
 
 function clear(): void {
+  if (converting) return;
   requestId += 1;
   strokes.splice(0);
   current = undefined;
@@ -138,11 +142,18 @@ function clear(): void {
 }
 
 function recognize(): void {
-  if (!ready || !worker || strokes.length === 0) return;
-  window.clearTimeout(idleTimer);
+  if (!ready || !worker || strokes.length === 0 || finished || converting) return;
   requestId += 1;
+  converting = true;
   recognitionStartedAt = performance.now();
-  setStatus("인식 중…");
+  element<HTMLButtonElement>("convert").disabled = true;
+  element<HTMLButtonElement>("clear").disabled = true;
+  for (const button of element<HTMLElement>("level-picker").querySelectorAll<HTMLButtonElement>(
+    "button",
+  )) {
+    button.disabled = true;
+  }
+  setStatus("변환 중…");
   worker.postMessage({
     type: "recognize",
     id: requestId,
@@ -155,36 +166,53 @@ function receiveWorkerMessage(event: MessageEvent<WorkerResponse>): void {
   const message = event.data;
   if (message.type === "ready") {
     ready = true;
-    setStatus(`준비됨 · 엔진 초기화 ${message.elapsedMs.toFixed(0)}ms`);
+    element<HTMLButtonElement>("convert").disabled = false;
+    setStatus("준비됨");
     return;
   }
   if (message.type === "error") {
     if (message.id !== undefined && message.id !== requestId) return;
+    converting = false;
+    element<HTMLButtonElement>("convert").disabled = false;
+    element<HTMLButtonElement>("clear").disabled = false;
+    for (const button of element<HTMLElement>("level-picker").querySelectorAll<HTMLButtonElement>(
+      "button",
+    )) {
+      button.disabled = false;
+    }
     setStatus(`오류: ${message.message}`);
     return;
   }
   if (message.id !== requestId) return;
   if (message.type === "result") {
+    const conversionMs = performance.now() - recognitionStartedAt;
     renderResult(message.result);
     showFeedback(
       canonicalizeLatex(message.result.latex) === canonicalizeLatex(currentExercise()?.latex ?? ""),
     );
+    setStatus(`변환 완료 · ${conversionMs.toFixed(0)}ms`);
     return;
   }
-  setStatus(`완료 · 전체 ${(performance.now() - recognitionStartedAt).toFixed(0)}ms`);
+  converting = false;
+  element<HTMLButtonElement>("convert").disabled = false;
+  element<HTMLButtonElement>("clear").disabled = false;
+  for (const button of element<HTMLElement>("level-picker").querySelectorAll<HTMLButtonElement>(
+    "button",
+  )) {
+    button.disabled = false;
+  }
 }
 
 function readContext(): RecognitionContext {
-  const schoolLevel = element<HTMLSelectElement>("school-level").value as SchoolLevel;
+  const grade = schoolLevel === "elementary" ? 6 : schoolLevel === "middle" ? 9 : 12;
+  const exercise = currentExercise();
   return {
     curriculum: "2022",
     schoolLevel,
-    grade: Number(element<HTMLInputElement>("grade").value),
-    subject: element<HTMLInputElement>("subject").value,
-    unit: element<HTMLInputElement>("unit").value,
-    answerType: element<HTMLSelectElement>("answer-type").value as AnswerType,
-    allowedVariables: splitInput("variables"),
-    allowedSymbols: splitInput("symbols"),
+    grade,
+    subject: exercise?.subject ?? "algebra",
+    unit: exercise?.unit ?? "expressions",
+    answerType: exercise?.answerType ?? ("expression" satisfies AnswerType),
   };
 }
 
@@ -192,14 +220,11 @@ function exerciseContext(): RecognitionContext {
   const exercise = currentExercise();
   const context = readContext();
   if (!exercise) return context;
-  element<HTMLSelectElement>("answer-type").value = exercise.answerType;
-  element<HTMLInputElement>("subject").value = exercise.subject;
-  element<HTMLInputElement>("unit").value = exercise.unit;
   return { ...context, answerType: exercise.answerType };
 }
 
 function resetPractice(): void {
-  exercises = availableExercises(readContext());
+  exercises = availableExercises(schoolLevel);
   exerciseIndex = 0;
   finished = false;
   element<HTMLElement>("practice-finished").hidden = true;
@@ -220,10 +245,15 @@ function renderExercise(): void {
   element<HTMLElement>("no-exercises").hidden = true;
   element<HTMLElement>("exercise-count").textContent = `${exerciseIndex + 1} / ${exercises.length}`;
   renderLatex(element<HTMLElement>("exercise-latex"), exercise.latex);
-  element<HTMLSelectElement>("answer-type").value = exercise.answerType;
-  element<HTMLInputElement>("subject").value = exercise.subject;
-  element<HTMLInputElement>("unit").value = exercise.unit;
   hideFeedback();
+}
+
+function updateLevelButtons(): void {
+  for (const button of element<HTMLElement>("level-picker").querySelectorAll<HTMLButtonElement>(
+    "[data-level]",
+  )) {
+    button.setAttribute("aria-pressed", String(button.dataset.level === schoolLevel));
+  }
 }
 
 function currentExercise(): PracticeExercise | undefined {
@@ -276,14 +306,6 @@ function hideFeedback(): void {
   element<HTMLElement>("practice-feedback").hidden = true;
 }
 
-function splitInput(id: string): string[] | undefined {
-  const values = element<HTMLInputElement>(id)
-    .value.split(",")
-    .map((value) => value.trim())
-    .filter(Boolean);
-  return values.length > 0 ? values : undefined;
-}
-
 function renderResult(result?: RecognitionResult): void {
   const card = element<HTMLElement>("result-problem");
   const latex = card.querySelector<HTMLElement>(".latex")!;
@@ -296,8 +318,7 @@ function renderResult(result?: RecognitionResult): void {
     return;
   }
   renderLatex(latex, result.latex);
-  card.querySelector(".meta")!.textContent =
-    `${result.elapsedMs.toFixed(0)}ms · confidence ${(result.confidence * 100).toFixed(1)}%`;
+  card.querySelector(".meta")!.textContent = `신뢰도 ${(result.confidence * 100).toFixed(1)}%`;
   alternatives.replaceChildren(
     ...result.alternatives.map((item) => {
       const candidate = document.createElement("span");
@@ -316,48 +337,6 @@ function renderLatex(target: HTMLElement, value: string, displayMode = true): vo
     strict: "ignore",
     trust: false,
   });
-}
-
-function exportSample(): void {
-  const truth = element<HTMLInputElement>("confirmed-latex").value.trim();
-  if (strokes.length === 0) {
-    setStatus("내보낼 필기가 없습니다");
-    return;
-  }
-  if (!truth) {
-    setStatus("확정 LaTeX를 입력하세요");
-    return;
-  }
-
-  const context = readContext();
-  const traces = strokes
-    .map(
-      (stroke, index) =>
-        `<trace id="${index}">${stroke.map((point) => `${point.x.toFixed(2)} ${point.y.toFixed(2)} ${point.t.toFixed(2)}`).join(", ")}</trace>`,
-    )
-    .join("\n  ");
-  const inkml = `<?xml version="1.0" encoding="UTF-8"?>
-<ink xmlns="http://www.w3.org/2003/InkML">
-  <annotation type="label">${escapeXml(truth)}</annotation>
-  <annotation type="context">${escapeXml(JSON.stringify(context))}</annotation>
-  ${traces}
-</ink>\n`;
-  const url = URL.createObjectURL(new Blob([inkml], { type: "application/inkml+xml" }));
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `math-sample-${new Date().toISOString().replaceAll(":", "-")}.inkml`;
-  link.click();
-  window.setTimeout(() => URL.revokeObjectURL(url), 0);
-  setStatus("학습 샘플을 로컬에 저장했습니다");
-}
-
-function escapeXml(value: string): string {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&apos;");
 }
 
 function setStatus(value: string): void {

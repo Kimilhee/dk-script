@@ -77,21 +77,16 @@ test("practice formulas fit their grade vocabulary and problem constraints", () 
   }
 });
 
-test("practice formulas follow the selected school level, grade, and allowed variables", () => {
-  const context: RecognitionContext = {
-    curriculum: "2022",
-    schoolLevel: "elementary",
-    grade: 2,
-    subject: "arithmetic",
-    unit: "numbers",
-    answerType: "expression",
-  };
-
-  expect(availableExercises(context).every((exercise) => exercise.minGrade <= 2)).toBe(true);
-  expect(availableExercises({ ...context, grade: 7 })).toEqual([]);
+test("practice formulas follow the selected school level", () => {
   expect(
-    availableExercises({ ...context, schoolLevel: "middle", grade: 7, allowedVariables: ["y"] }),
-  ).toEqual([]);
+    availableExercises("elementary").every((exercise) => exercise.schoolLevel === "elementary"),
+  ).toBe(true);
+  expect(availableExercises("middle").every((exercise) => exercise.schoolLevel === "middle")).toBe(
+    true,
+  );
+  expect(availableExercises("high").every((exercise) => exercise.schoolLevel === "high")).toBe(
+    true,
+  );
 });
 
 /** 한 획을 주어진 샘플 개수로 찍는다. 같은 형태, 다른 샘플레이트. */

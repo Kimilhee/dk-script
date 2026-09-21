@@ -12,13 +12,16 @@
 * {
   box-sizing: border-box;
 }
+[hidden] {
+  display: none !important;
+}
 body {
   margin: 0;
 }
 main {
   width: min(1180px, calc(100% - 24px));
   margin: 0 auto;
-  padding: 28px 0 48px;
+  padding: 20px 0 32px;
 }
 header {
   display: flex;
@@ -28,7 +31,7 @@ header {
 }
 h1 {
   margin: 4px 0;
-  font-size: clamp(28px, 4vw, 46px);
+  font-size: clamp(26px, 4vw, 42px);
 }
 header p {
   margin: 0;
@@ -43,67 +46,78 @@ header p {
 #status {
   background: #10243f;
   color: white;
-  padding: 10px 14px;
+  padding: 9px 13px;
   border-radius: 999px;
   font-size: 13px;
+  white-space: nowrap;
 }
 .exercise {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  margin: 24px 0 12px;
-  padding: 18px 20px;
+  gap: 12px;
+  min-height: 42px;
+  margin: 12px 0 8px;
+  padding: 4px 10px;
   border: 1px solid #b8d9d2;
-  border-radius: 14px;
+  border-radius: 10px;
   background: #f5fffc;
 }
-.exercise .eyebrow {
-  margin: 0;
+.exercise > strong {
+  flex: 0 0 auto;
+  color: #087b68;
+  font-size: 13px;
 }
 .exercise-latex {
-  min-height: 55px;
-  padding-top: 7px;
-  font-size: clamp(26px, 4vw, 38px);
+  min-width: 0;
+  font-size: 23px;
+  line-height: 1.4;
+  overflow-x: auto;
 }
-.exercise > p {
+.exercise-latex .katex-display {
   margin: 0;
-  color: #536277;
-  font-size: 14px;
+}
+.exercise-count {
+  flex: 0 0 auto;
+  margin-left: auto;
+  color: #68778a;
+  font-size: 12px;
 }
 .notice,
 .practice-finished {
-  padding: 14px 16px;
+  padding: 12px 14px;
   border-radius: 12px;
   background: #fff8e7;
   color: #66511b;
 }
-.controls {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(110px, 1fr));
-  gap: 10px;
-  margin: 24px 0 12px;
+.level-picker {
+  display: flex;
+  gap: 6px;
+  margin: 0 0 8px;
 }
-label {
-  color: #526175;
-  font-size: 12px;
-  font-weight: 700;
-}
-input,
-select {
-  width: 100%;
-  margin-top: 5px;
-  padding: 9px;
-  border: 1px solid #bdc9d7;
+button {
+  border: 0;
   border-radius: 8px;
-  background: white;
-  color: #172235;
+  padding: 9px 15px;
+  color: #28384d;
+  background: #dbe4ed;
+  font-weight: 800;
+  cursor: pointer;
+}
+button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+.level-picker button[aria-pressed="true"],
+#convert,
+#next-exercise {
+  color: white;
+  background: #0f766e;
 }
 .drawing {
-  padding: 12px;
+  padding: 10px;
   background: white;
   border: 1px solid #cbd5e1;
-  border-radius: 16px;
+  border-radius: 14px;
   box-shadow: 0 8px 30px rgb(20 40 70 / 8%);
 }
 canvas {
@@ -115,42 +129,36 @@ canvas {
     linear-gradient(#edf1f5 1px, transparent 1px),
     linear-gradient(90deg, #edf1f5 1px, transparent 1px);
   background-size: 24px 24px;
-  border-radius: 10px;
+  border-radius: 9px;
   touch-action: none;
 }
 .actions {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  margin-top: 10px;
+  margin-top: 8px;
 }
-button {
-  border: 0;
-  border-radius: 9px;
-  padding: 10px 16px;
-  color: white;
-  background: #0f766e;
-  font-weight: 800;
-}
-#clear {
+#clear,
+.feedback-actions button:not(#next-exercise),
+#restart-practice {
   color: #28384d;
   background: #dbe4ed;
 }
 .results {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 10px;
-  margin-top: 12px;
+  gap: 8px;
+  margin-top: 8px;
 }
 .practice-feedback,
 .practice-finished {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-top: 10px;
-  padding: 12px 15px;
-  border-radius: 12px;
+  gap: 10px;
+  margin-top: 8px;
+  padding: 9px 12px;
+  border-radius: 10px;
   background: #e3f5ee;
 }
 .practice-feedback p,
@@ -162,22 +170,17 @@ button {
 .feedback-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
 }
-.feedback-actions button:not(#next-exercise),
-#restart-practice {
-  color: #28384d;
-  background: #dbe4ed;
+.feedback-actions button {
+  padding: 7px 10px;
 }
 article {
   min-width: 0;
-  padding: 15px;
-  border-radius: 13px;
+  padding: 10px 12px;
+  border-radius: 11px;
   background: #fff;
-  border-top: 4px solid #8da1b7;
-}
-article:last-child {
-  border-top-color: #0f766e;
+  border-top: 3px solid #0f766e;
 }
 h2 {
   margin: 0;
@@ -186,9 +189,9 @@ h2 {
 .latex {
   display: grid;
   align-items: center;
-  min-height: 48px;
+  min-height: 38px;
   overflow-x: auto;
-  padding: 5px 0;
+  padding: 3px 0;
 }
 .latex .katex-display {
   margin: 0;
@@ -210,28 +213,8 @@ h2 {
   color: #a2afbd;
   content: "·";
 }
-.collection {
-  display: grid;
-  grid-template-columns: 1fr minmax(240px, 2fr) auto;
-  gap: 12px;
-  align-items: end;
-  margin-top: 12px;
-  padding: 15px;
-  border: 1px solid #cbd5e1;
-  border-radius: 13px;
-  background: #fff;
-}
-.collection h2,
-.collection p {
-  margin: 0;
-}
-.collection p {
-  margin-top: 5px;
-  color: #68778a;
-  font-size: 12px;
-}
 footer {
-  margin-top: 20px;
+  margin-top: 16px;
   color: #68778a;
   font-size: 12px;
   text-align: center;
@@ -246,18 +229,97 @@ footer a {
   }
   #status {
     display: inline-block;
-    margin-top: 12px;
+    margin-top: 8px;
   }
-  .controls {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  .exercise,
   .practice-feedback,
   .practice-finished {
     align-items: stretch;
     flex-direction: column;
   }
-  .collection {
-    grid-template-columns: 1fr;
+}
+
+@media (orientation: portrait) and (min-height: 850px) {
+  html,
+  body {
+    height: 100%;
+    overflow: hidden;
+  }
+  main {
+    display: grid;
+    grid-template-rows: auto auto auto minmax(180px, 1fr) auto auto;
+    gap: 6px;
+    width: 100%;
+    height: 100dvh;
+    min-height: 0;
+    padding: 8px 14px;
+  }
+  header {
+    align-items: center;
+  }
+  h1 {
+    margin: 0;
+    font-size: 22px;
+  }
+  header .eyebrow,
+  header > div > p:not(.eyebrow),
+  footer {
+    display: none;
+  }
+  #status {
+    margin: 0;
+    padding: 7px 10px;
+  }
+  .exercise,
+  .level-picker,
+  .results,
+  .practice-feedback,
+  .practice-finished {
+    margin: 0;
+  }
+  .exercise {
+    min-height: 38px;
+  }
+  .level-picker button {
+    padding: 7px 13px;
+  }
+  .drawing {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    padding: 8px;
+  }
+  canvas {
+    flex: 1 1 auto;
+    width: 100%;
+    height: auto;
+    min-height: 0;
+  }
+  .actions {
+    flex: 0 0 auto;
+    margin-top: 6px;
+  }
+  .actions button {
+    padding: 8px 13px;
+  }
+  article {
+    padding: 7px 10px;
+  }
+  .latex {
+    min-height: 30px;
+  }
+  .meta,
+  .alternatives {
+    margin-top: 2px;
+  }
+  .alternatives {
+    display: none;
+  }
+  .practice-feedback,
+  .practice-finished {
+    flex-direction: row;
+    padding: 6px 9px;
+  }
+  .feedback-actions button {
+    padding: 6px 9px;
   }
 }

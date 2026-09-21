@@ -1,5 +1,4 @@
-import { tokenizeLatex } from "./latex.ts";
-import type { AnswerType, RecognitionContext, SchoolLevel } from "./types.ts";
+import type { AnswerType, SchoolLevel } from "./types.ts";
 
 export interface PracticeExercise {
   latex: string;
@@ -31,30 +30,8 @@ export const PRACTICE_EXERCISES: PracticeExercise[] = [
   high("\\begin{matrix}1&2\\\\3&4\\end{matrix}", 11, 12, "matrix"),
 ];
 
-export function availableExercises(context: RecognitionContext): PracticeExercise[] {
-  return PRACTICE_EXERCISES.filter((exercise) => {
-    if (
-      exercise.schoolLevel !== context.schoolLevel ||
-      context.grade < exercise.minGrade ||
-      context.grade > exercise.maxGrade
-    ) {
-      return false;
-    }
-    const tokens = tokenizeLatex(exercise.latex);
-    const variables = tokens.filter((token) => /^[a-zA-Z]$/u.test(token));
-    if (
-      context.allowedVariables &&
-      variables.some((variable) => !context.allowedVariables?.includes(variable))
-    ) {
-      return false;
-    }
-    const symbols = tokens.filter(
-      (token) => !/^[a-zA-Z0-9]$/u.test(token) && !"_^{}".includes(token),
-    );
-    return (
-      !context.allowedSymbols || symbols.every((symbol) => context.allowedSymbols?.includes(symbol))
-    );
-  });
+export function availableExercises(schoolLevel: SchoolLevel): PracticeExercise[] {
+  return PRACTICE_EXERCISES.filter((exercise) => exercise.schoolLevel === schoolLevel);
 }
 
 function elementary(
