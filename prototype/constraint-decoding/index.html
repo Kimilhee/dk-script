@@ -23,6 +23,14 @@
         <div id="exercise-latex" class="exercise-latex"></div>
         <span id="exercise-count" class="exercise-count"></span>
       </section>
+      <section class="results" aria-label="인식 결과">
+        <article id="result-problem">
+          <h2>인식 결과</h2>
+          <div class="latex">—</div>
+          <p class="meta"></p>
+          <div class="alternatives" aria-label="후보 결과"></div>
+        </article>
+      </section>
       <p id="no-exercises" class="notice" hidden>이 학교급에서 사용할 연습 수식이 없습니다.</p>
       <nav id="level-picker" class="level-picker" aria-label="학교급 선택">
         <button type="button" data-level="elementary" aria-pressed="false">초등</button>
@@ -31,20 +39,11 @@
       </nav>
 
       <section class="drawing">
-        <canvas id="ink" aria-label="수식 필기 캔버스"></canvas>
         <div class="actions">
           <button id="clear" type="button">지우기</button>
           <button id="convert" type="button" disabled>변환</button>
         </div>
-      </section>
-
-      <section class="results" aria-label="인식 결과">
-        <article id="result-problem">
-          <h2>인식 결과</h2>
-          <div class="latex">—</div>
-          <p class="meta"></p>
-          <p class="alternatives"></p>
-        </article>
+        <canvas id="ink" aria-label="수식 필기 캔버스"></canvas>
       </section>
       <section id="practice-feedback" class="practice-feedback" aria-live="polite" hidden>
         <p id="feedback-message"></p>

@@ -326,9 +326,16 @@ function renderResult(result?: RecognitionResult): void {
   renderLatex(latex, result.latex);
   card.querySelector(".meta")!.textContent = `신뢰도 ${(result.confidence * 100).toFixed(1)}%`;
   alternatives.replaceChildren(
-    ...result.alternatives.map((item) => {
+    ...result.alternatives.slice(0, 3).map((item, index) => {
       const candidate = document.createElement("span");
-      renderLatex(candidate, item.latex, false);
+      candidate.className = "candidate";
+      const rank = document.createElement("strong");
+      rank.textContent = `${index + 2}순위`;
+      const value = document.createElement("span");
+      renderLatex(value, item.latex, false);
+      const confidence = document.createElement("small");
+      confidence.textContent = `${(item.confidence * 100).toFixed(1)}%`;
+      candidate.append(rank, value, confidence);
       return candidate;
     }),
   );

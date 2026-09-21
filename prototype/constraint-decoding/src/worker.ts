@@ -49,7 +49,7 @@ async function handle(request: WorkerRequest): Promise<void> {
       request.context,
       "problem",
       memory,
-      { beamSize: 2, maxLength: 48 },
+      { beamSize: 4, maxLength: 48 },
     );
     if (request.id !== latestRequestId) return;
     respond({ type: "result", id: request.id, result });
