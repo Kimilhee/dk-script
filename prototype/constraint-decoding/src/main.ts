@@ -1,7 +1,7 @@
 import katex from "katex";
 import "katex/dist/katex.min.css";
 import "./styles.css";
-import { canonicalizeLatex } from "./latex.ts";
+import { canonicalizeLatex, inferContext } from "./latex.ts";
 import { availableExercises, type PracticeExercise } from "./practice.ts";
 import type {
   AnswerType,
@@ -220,7 +220,13 @@ function exerciseContext(): RecognitionContext {
   const exercise = currentExercise();
   const context = readContext();
   if (!exercise) return context;
-  return { ...context, answerType: exercise.answerType };
+  const exerciseConstraints = inferContext(exercise.latex);
+  return {
+    ...context,
+    answerType: exercise.answerType,
+    allowedVariables: exerciseConstraints.allowedVariables,
+    allowedSymbols: exerciseConstraints.allowedSymbols,
+  };
 }
 
 function resetPractice(): void {

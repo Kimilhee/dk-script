@@ -4,7 +4,11 @@ import {
   curriculumTokens,
   supportsTokenSequence,
 } from "../prototype/constraint-decoding/src/constraints.ts";
-import { buildVocab, tokenizeLatex } from "../prototype/constraint-decoding/src/latex.ts";
+import {
+  buildVocab,
+  inferContext,
+  tokenizeLatex,
+} from "../prototype/constraint-decoding/src/latex.ts";
 import { resampleStrokes } from "../prototype/constraint-decoding/src/resample.ts";
 import {
   availableExercises,
@@ -87,6 +91,14 @@ test("practice formulas follow the selected school level", () => {
   expect(availableExercises("high").every((exercise) => exercise.schoolLevel === "high")).toBe(
     true,
   );
+});
+
+test("exercise variables constrain visually similar alternatives", () => {
+  const vocab = buildVocab(curriculumTokens());
+  const context = inferContext("2x=10");
+
+  expect(supportsTokenSequence(vocab, context, "problem", tokenizeLatex("2x=10"))).toBe(true);
+  expect(supportsTokenSequence(vocab, context, "problem", tokenizeLatex("2z=10"))).toBe(false);
 });
 
 /** 한 획을 주어진 샘플 개수로 찍는다. 같은 형태, 다른 샘플레이트. */
