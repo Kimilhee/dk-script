@@ -559,10 +559,10 @@ type WorkerResponse =
   | { type: "ready"; elapsedMs: number }
   | { type: "error"; id?: number; message: string }
   | {
-    type: "result";
-    id: number;
-    result: RecognitionResult;
-  }
+      type: "result";
+      id: number;
+      result: RecognitionResult;
+    }
   | { type: "complete"; id: number };
 
 type StrokeWidthMode = "pressure" | "constant";
