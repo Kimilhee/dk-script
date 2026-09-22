@@ -162,7 +162,7 @@ function scheduleRedraw(): void {
 
 function pressureWidth(pressure = 0.5): number {
   const normalized = Math.max(0, Math.min(1, pressure));
-  return Math.max(0.75, strokeWidth + (normalized - 0.5) * 4);
+  return strokeWidth * normalized;
 }
 
 function resizeCanvas(): void {
