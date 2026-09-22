@@ -32,21 +32,27 @@
         </article>
       </section>
       <p id="no-exercises" class="notice" hidden>이 학교급에서 사용할 연습 수식이 없습니다.</p>
-      <nav id="level-picker" class="level-picker" aria-label="학교급 선택">
-        <button type="button" data-level="elementary" aria-pressed="false">초등</button>
-        <button type="button" data-level="middle" aria-pressed="true">중등</button>
-        <button type="button" data-level="high" aria-pressed="false">고등</button>
-      </nav>
+      <div class="input-options">
+        <nav id="level-picker" class="option-picker" aria-label="학교급 선택">
+          <button type="button" data-level="elementary" aria-pressed="false">초등</button>
+          <button type="button" data-level="middle" aria-pressed="true">중등</button>
+          <button type="button" data-level="high" aria-pressed="false">고등</button>
+        </nav>
+        <div id="stroke-mode-picker" class="option-picker" aria-label="필기 두께 변화">
+          <span>필기</span>
+          <button type="button" data-stroke-mode="pressure" aria-pressed="true">필압</button>
+          <button type="button" data-stroke-mode="constant" aria-pressed="false">일정</button>
+        </div>
+        <div id="stroke-width-picker" class="option-picker" aria-label="필기 두께">
+          <span>두께</span>
+          <button type="button" data-stroke-width="2" aria-pressed="false">2</button>
+          <button type="button" data-stroke-width="3" aria-pressed="true">3</button>
+          <button type="button" data-stroke-width="4" aria-pressed="false">4</button>
+        </div>
+      </div>
 
       <section class="drawing">
         <div class="actions">
-          <label class="stroke-width-control" for="stroke-width-mode">
-            선 두께
-            <select id="stroke-width-mode">
-              <option value="pressure">필압 반영</option>
-              <option value="constant">일정한 두께</option>
-            </select>
-          </label>
           <button id="clear" type="button">지우기</button>
           <button id="convert" type="button" disabled>변환</button>
         </div>

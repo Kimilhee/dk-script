@@ -13,7 +13,6 @@ import type {
 
 const canvas = element<HTMLCanvasElement>("ink");
 const context2d = requireCanvasContext(canvas);
-const strokeWidthMode = element<HTMLSelectElement>("stroke-width-mode");
 const strokes: Stroke[] = [];
 let worker: Worker | undefined;
 let current: Stroke | undefined;
@@ -25,16 +24,18 @@ let exercises: PracticeExercise[] = [];
 let exerciseIndex = 0;
 let finished = false;
 let schoolLevel: SchoolLevel = "middle";
+let strokeWidthMode: StrokeWidthMode = "pressure";
+let strokeWidth = 3;
 
 resizeCanvas();
 updateLevelButtons();
+updateInkOptionButtons();
 resetPractice();
 window.addEventListener("resize", resizeCanvas);
 canvas.addEventListener("pointerdown", pointerDown);
 canvas.addEventListener("pointermove", pointerMove);
 canvas.addEventListener("pointerup", pointerUp);
 canvas.addEventListener("pointercancel", pointerUp);
-strokeWidthMode.addEventListener("change", redraw);
 element<HTMLButtonElement>("clear").addEventListener("click", clear);
 element<HTMLButtonElement>("convert").addEventListener("click", recognize);
 element<HTMLButtonElement>("mark-correct").addEventListener("click", markCorrect);
@@ -49,6 +50,20 @@ element<HTMLElement>("level-picker").addEventListener("click", (event) => {
   schoolLevel = button.dataset.level as SchoolLevel;
   updateLevelButtons();
   resetPractice();
+});
+element<HTMLElement>("stroke-mode-picker").addEventListener("click", (event) => {
+  const button = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-stroke-mode]");
+  if (!button) return;
+  strokeWidthMode = button.dataset.strokeMode as StrokeWidthMode;
+  updateInkOptionButtons();
+  redraw();
+});
+element<HTMLElement>("stroke-width-picker").addEventListener("click", (event) => {
+  const button = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-stroke-width]");
+  if (!button) return;
+  strokeWidth = Number(button.dataset.strokeWidth);
+  updateInkOptionButtons();
+  redraw();
 });
 setStatus("인식 엔진 준비 중…");
 void initialize();
@@ -116,11 +131,11 @@ function redraw(): void {
   context2d.strokeStyle = "#182231";
   for (const stroke of strokes) {
     if (stroke.length === 0) continue;
-    if (strokeWidthMode.value === "pressure") {
+    if (strokeWidthMode === "pressure") {
       drawPressureStroke(stroke);
       continue;
     }
-    context2d.lineWidth = 3;
+    context2d.lineWidth = strokeWidth;
     context2d.beginPath();
     context2d.moveTo(stroke[0].x, stroke[0].y);
     for (const point of stroke.slice(1)) context2d.lineTo(point.x, point.y);
@@ -144,7 +159,8 @@ function drawPressureStroke(stroke: Stroke): void {
 }
 
 function pressureWidth(pressure = 0.5): number {
-  return 1 + Math.max(0, Math.min(1, pressure)) * 4;
+  const normalized = Math.max(0, Math.min(1, pressure));
+  return Math.max(0.75, strokeWidth + (normalized - 0.5) * 4);
 }
 
 function resizeCanvas(): void {
@@ -288,6 +304,19 @@ function updateLevelButtons(): void {
   }
 }
 
+function updateInkOptionButtons(): void {
+  for (const button of element<HTMLElement>(
+    "stroke-mode-picker",
+  ).querySelectorAll<HTMLButtonElement>("[data-stroke-mode]")) {
+    button.setAttribute("aria-pressed", String(button.dataset.strokeMode === strokeWidthMode));
+  }
+  for (const button of element<HTMLElement>(
+    "stroke-width-picker",
+  ).querySelectorAll<HTMLButtonElement>("[data-stroke-width]")) {
+    button.setAttribute("aria-pressed", String(Number(button.dataset.strokeWidth) === strokeWidth));
+  }
+}
+
 function currentExercise(): PracticeExercise | undefined {
   return exercises[exerciseIndex];
 }
@@ -403,3 +432,5 @@ type WorkerResponse =
       result: RecognitionResult;
     }
   | { type: "complete"; id: number };
+
+type StrokeWidthMode = "pressure" | "constant";

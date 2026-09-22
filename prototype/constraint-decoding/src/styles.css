@@ -89,10 +89,26 @@ header p {
   background: #fff8e7;
   color: #66511b;
 }
-.level-picker {
+.input-options {
   display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 6px;
   margin: 0 0 8px;
+}
+.option-picker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.option-picker + .option-picker {
+  padding-left: 8px;
+  border-left: 1px solid #cbd5e1;
+}
+.option-picker span {
+  color: #536277;
+  font-size: 12px;
+  font-weight: 800;
 }
 button {
   border: 0;
@@ -107,7 +123,7 @@ button:disabled {
   opacity: 0.55;
   cursor: wait;
 }
-.level-picker button[aria-pressed="true"],
+.option-picker button[aria-pressed="true"],
 #convert,
 #next-exercise {
   color: white;
@@ -141,23 +157,6 @@ canvas {
   justify-content: flex-end;
   gap: 8px;
   margin-top: 8px;
-}
-.stroke-width-control {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-right: auto;
-  color: #536277;
-  font-size: 13px;
-  font-weight: 700;
-}
-.stroke-width-control select {
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  padding: 7px 9px;
-  color: #28384d;
-  background: white;
-  font: inherit;
 }
 #clear,
 .feedback-actions button:not(#next-exercise),
@@ -301,7 +300,7 @@ footer a {
     padding: 7px 10px;
   }
   .exercise,
-  .level-picker,
+  .input-options,
   .results,
   .practice-feedback,
   .practice-finished {
@@ -310,7 +309,7 @@ footer a {
   .exercise {
     min-height: 38px;
   }
-  .level-picker button {
+  .option-picker button {
     padding: 7px 13px;
   }
   .drawing {
