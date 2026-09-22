@@ -2,6 +2,7 @@ import katex from "katex";
 import "katex/dist/katex.min.css";
 import "./styles.css";
 import { canonicalizeLatex, inferContext } from "./latex.ts";
+import { drawOutlineStroke } from "./outline-stroke.prototype.ts";
 import { availableExercises, type PracticeExercise } from "./practice.ts";
 import type {
   AnswerType,
@@ -26,6 +27,7 @@ let finished = false;
 let schoolLevel: SchoolLevel = "middle";
 let strokeWidthMode: StrokeWidthMode = "pressure";
 let strokeWidth = 3;
+let redrawFrame: number | undefined;
 
 resizeCanvas();
 updateLevelButtons();
@@ -101,7 +103,7 @@ function pointerMove(event: PointerEvent): void {
   if (!current) return;
   const events = event.getCoalescedEvents?.() ?? [event];
   for (const coalesced of events) appendPoint(coalesced);
-  redraw();
+  scheduleRedraw();
   event.preventDefault();
 }
 
@@ -109,6 +111,8 @@ function pointerUp(event: PointerEvent): void {
   if (!current) return;
   appendPoint(event);
   current = undefined;
+  if (redrawFrame !== undefined) cancelAnimationFrame(redrawFrame);
+  redrawFrame = undefined;
   redraw();
 }
 
@@ -129,6 +133,7 @@ function redraw(): void {
   context2d.lineCap = "round";
   context2d.lineJoin = "round";
   context2d.strokeStyle = "#182231";
+  context2d.fillStyle = "#182231";
   for (const stroke of strokes) {
     if (stroke.length === 0) continue;
     if (strokeWidthMode === "pressure") {
@@ -144,18 +149,15 @@ function redraw(): void {
 }
 
 function drawPressureStroke(stroke: Stroke): void {
-  let width = pressureWidth(stroke[0].pressure);
-  for (let index = 1; index < stroke.length; index += 1) {
-    const previous = stroke[index - 1];
-    const point = stroke[index];
-    const targetWidth = pressureWidth(((previous.pressure ?? 0.5) + (point.pressure ?? 0.5)) / 2);
-    width = width * 0.7 + targetWidth * 0.3;
-    context2d.lineWidth = width;
-    context2d.beginPath();
-    context2d.moveTo(previous.x, previous.y);
-    context2d.lineTo(point.x, point.y);
-    context2d.stroke();
-  }
+  drawOutlineStroke(context2d, stroke, pressureWidth);
+}
+
+function scheduleRedraw(): void {
+  if (redrawFrame !== undefined) return;
+  redrawFrame = requestAnimationFrame(() => {
+    redrawFrame = undefined;
+    redraw();
+  });
 }
 
 function pressureWidth(pressure = 0.5): number {
