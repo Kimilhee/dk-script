@@ -13,6 +13,7 @@ import type {
 
 const canvas = element<HTMLCanvasElement>("ink");
 const context2d = requireCanvasContext(canvas);
+const strokeWidthMode = element<HTMLSelectElement>("stroke-width-mode");
 const strokes: Stroke[] = [];
 let worker: Worker | undefined;
 let current: Stroke | undefined;
@@ -33,6 +34,7 @@ canvas.addEventListener("pointerdown", pointerDown);
 canvas.addEventListener("pointermove", pointerMove);
 canvas.addEventListener("pointerup", pointerUp);
 canvas.addEventListener("pointercancel", pointerUp);
+strokeWidthMode.addEventListener("change", redraw);
 element<HTMLButtonElement>("clear").addEventListener("click", clear);
 element<HTMLButtonElement>("convert").addEventListener("click", recognize);
 element<HTMLButtonElement>("mark-correct").addEventListener("click", markCorrect);
@@ -102,6 +104,7 @@ function appendPoint(event: PointerEvent): void {
     x: event.clientX - bounds.left,
     y: event.clientY - bounds.top,
     t: performance.now(),
+    pressure: event.pressure,
   });
 }
 
@@ -110,15 +113,38 @@ function redraw(): void {
   context2d.clearRect(0, 0, bounds.width, bounds.height);
   context2d.lineCap = "round";
   context2d.lineJoin = "round";
-  context2d.lineWidth = 3;
   context2d.strokeStyle = "#182231";
   for (const stroke of strokes) {
     if (stroke.length === 0) continue;
+    if (strokeWidthMode.value === "pressure") {
+      drawPressureStroke(stroke);
+      continue;
+    }
+    context2d.lineWidth = 3;
     context2d.beginPath();
     context2d.moveTo(stroke[0].x, stroke[0].y);
     for (const point of stroke.slice(1)) context2d.lineTo(point.x, point.y);
     context2d.stroke();
   }
+}
+
+function drawPressureStroke(stroke: Stroke): void {
+  let width = pressureWidth(stroke[0].pressure);
+  for (let index = 1; index < stroke.length; index += 1) {
+    const previous = stroke[index - 1];
+    const point = stroke[index];
+    const targetWidth = pressureWidth(((previous.pressure ?? 0.5) + (point.pressure ?? 0.5)) / 2);
+    width = width * 0.7 + targetWidth * 0.3;
+    context2d.lineWidth = width;
+    context2d.beginPath();
+    context2d.moveTo(previous.x, previous.y);
+    context2d.lineTo(point.x, point.y);
+    context2d.stroke();
+  }
+}
+
+function pressureWidth(pressure = 0.5): number {
+  return 1 + Math.max(0, Math.min(1, pressure)) * 4;
 }
 
 function resizeCanvas(): void {

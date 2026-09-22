@@ -28,6 +28,7 @@ export interface StrokePoint {
   x: number;
   y: number;
   t: number;
+  pressure?: number;
 }
 
 export type Stroke = StrokePoint[];
