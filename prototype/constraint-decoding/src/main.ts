@@ -242,7 +242,7 @@ function eraseBetween(from: CanvasPoint, to: CanvasPoint): boolean {
 
 function pressureWidth(pressure = 0.5): number {
   const normalized = Math.max(0, Math.min(1, pressure));
-  const response = Math.min(1, normalized / 0.7);
+  const response = Math.min(1, normalized / 0.8);
   return 0.2 + (strokeWidth - 0.2) * response;
 }
 
@@ -559,10 +559,10 @@ type WorkerResponse =
   | { type: "ready"; elapsedMs: number }
   | { type: "error"; id?: number; message: string }
   | {
-      type: "result";
-      id: number;
-      result: RecognitionResult;
-    }
+    type: "result";
+    id: number;
+    result: RecognitionResult;
+  }
   | { type: "complete"; id: number };
 
 type StrokeWidthMode = "pressure" | "constant";
