@@ -38,6 +38,11 @@
           <button type="button" data-level="middle" aria-pressed="true">중등</button>
           <button type="button" data-level="high" aria-pressed="false">고등</button>
         </nav>
+        <div id="tool-picker" class="option-picker" aria-label="필기 도구">
+          <span>도구</span>
+          <button type="button" data-tool="pen" aria-pressed="true">펜</button>
+          <button type="button" data-tool="eraser" aria-pressed="false">지우개</button>
+        </div>
         <div id="stroke-mode-picker" class="option-picker" aria-label="필기 두께 변화">
           <span>필기</span>
           <button type="button" data-stroke-mode="pressure" aria-pressed="true">필압</button>
@@ -49,11 +54,17 @@
           <button type="button" data-stroke-width="3" aria-pressed="true">3</button>
           <button type="button" data-stroke-width="4" aria-pressed="false">4</button>
         </div>
+        <label id="eraser-width-control" class="option-picker range-control" hidden>
+          <span>지우개 두께</span>
+          <input id="eraser-width" type="range" min="8" max="48" step="2" value="24" />
+          <output id="eraser-width-value" for="eraser-width">24px</output>
+        </label>
       </div>
 
       <section class="drawing">
         <div class="actions">
-          <button id="clear" type="button">지우기</button>
+          <button id="undo" type="button" disabled>취소</button>
+          <button id="clear" type="button">전체 지우기</button>
           <button id="convert" type="button" disabled>변환</button>
         </div>
         <canvas id="ink" aria-label="수식 필기 캔버스"></canvas>

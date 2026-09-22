@@ -1,6 +1,7 @@
 import katex from "katex";
 import "katex/dist/katex.min.css";
 import "./styles.css";
+import { eraseStrokes, type CanvasPoint } from "./erase-strokes.prototype.ts";
 import { canonicalizeLatex, inferContext } from "./latex.ts";
 import { drawOutlineStroke } from "./outline-stroke.prototype.ts";
 import { availableExercises, type PracticeExercise } from "./practice.ts";
@@ -27,6 +28,14 @@ let finished = false;
 let schoolLevel: SchoolLevel = "middle";
 let strokeWidthMode: StrokeWidthMode = "pressure";
 let strokeWidth = 3;
+let inkTool: InkTool = "pen";
+let activeTool: InkTool | undefined;
+let eraserWidth = 24;
+let eraserCursor: CanvasPoint | undefined;
+let previousEraserPoint: CanvasPoint | undefined;
+let eraserChanged = false;
+let pendingUndoSnapshot: Stroke[] | undefined;
+let undoSnapshot: Stroke[] | undefined;
 let redrawFrame: number | undefined;
 
 resizeCanvas();
@@ -38,6 +47,7 @@ canvas.addEventListener("pointerdown", pointerDown);
 canvas.addEventListener("pointermove", pointerMove);
 canvas.addEventListener("pointerup", pointerUp);
 canvas.addEventListener("pointercancel", pointerUp);
+element<HTMLButtonElement>("undo").addEventListener("click", undoLastInkAction);
 element<HTMLButtonElement>("clear").addEventListener("click", clear);
 element<HTMLButtonElement>("convert").addEventListener("click", recognize);
 element<HTMLButtonElement>("mark-correct").addEventListener("click", markCorrect);
@@ -53,6 +63,15 @@ element<HTMLElement>("level-picker").addEventListener("click", (event) => {
   updateLevelButtons();
   resetPractice();
 });
+element<HTMLElement>("tool-picker").addEventListener("click", (event) => {
+  if (activeTool || converting) return;
+  const button = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-tool]");
+  if (!button) return;
+  inkTool = button.dataset.tool as InkTool;
+  eraserCursor = undefined;
+  updateInkOptionButtons();
+  redraw();
+});
 element<HTMLElement>("stroke-mode-picker").addEventListener("click", (event) => {
   const button = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-stroke-mode]");
   if (!button) return;
@@ -65,6 +84,11 @@ element<HTMLElement>("stroke-width-picker").addEventListener("click", (event) =>
   if (!button) return;
   strokeWidth = Number(button.dataset.strokeWidth);
   updateInkOptionButtons();
+  redraw();
+});
+element<HTMLInputElement>("eraser-width").addEventListener("input", (event) => {
+  eraserWidth = Number((event.target as HTMLInputElement).value);
+  element<HTMLOutputElement>("eraser-width-value").value = `${eraserWidth}px`;
   redraw();
 });
 setStatus("인식 엔진 준비 중…");
@@ -93,6 +117,17 @@ function pointerDown(event: PointerEvent): void {
   requestId += 1;
   hideFeedback();
   canvas.setPointerCapture(event.pointerId);
+  activeTool = inkTool;
+  pendingUndoSnapshot = cloneStrokes();
+  if (activeTool === "eraser") {
+    const point = canvasPoint(event);
+    eraserCursor = point;
+    previousEraserPoint = point;
+    eraserChanged = eraseBetween(point, point);
+    scheduleRedraw();
+    event.preventDefault();
+    return;
+  }
   current = [];
   strokes.push(current);
   appendPoint(event);
@@ -100,31 +135,56 @@ function pointerDown(event: PointerEvent): void {
 }
 
 function pointerMove(event: PointerEvent): void {
-  if (!current) return;
+  if (!activeTool) return;
   const events = event.getCoalescedEvents?.() ?? [event];
+  if (activeTool === "eraser") {
+    for (const coalesced of events) {
+      const point = canvasPoint(coalesced);
+      eraserChanged = eraseBetween(previousEraserPoint ?? point, point) || eraserChanged;
+      previousEraserPoint = point;
+      eraserCursor = point;
+    }
+    scheduleRedraw();
+    event.preventDefault();
+    return;
+  }
   for (const coalesced of events) appendPoint(coalesced);
   scheduleRedraw();
   event.preventDefault();
 }
 
 function pointerUp(event: PointerEvent): void {
-  if (!current) return;
-  appendPoint(event);
+  if (!activeTool) return;
+  if (activeTool === "eraser") {
+    const point = canvasPoint(event);
+    eraserChanged = eraseBetween(previousEraserPoint ?? point, point) || eraserChanged;
+    finishInkAction(eraserChanged);
+  } else {
+    appendPoint(event);
+    finishInkAction(true);
+  }
   current = undefined;
+  activeTool = undefined;
+  eraserCursor = undefined;
+  previousEraserPoint = undefined;
+  eraserChanged = false;
   if (redrawFrame !== undefined) cancelAnimationFrame(redrawFrame);
   redrawFrame = undefined;
   redraw();
+  event.preventDefault();
 }
 
 function appendPoint(event: PointerEvent): void {
   if (!current) return;
+  current.push({ ...canvasPoint(event), t: performance.now(), pressure: event.pressure });
+}
+
+function canvasPoint(event: PointerEvent): CanvasPoint {
   const bounds = canvas.getBoundingClientRect();
-  current.push({
+  return {
     x: event.clientX - bounds.left,
     y: event.clientY - bounds.top,
-    t: performance.now(),
-    pressure: event.pressure,
-  });
+  };
 }
 
 function redraw(): void {
@@ -146,6 +206,7 @@ function redraw(): void {
     for (const point of stroke.slice(1)) context2d.lineTo(point.x, point.y);
     context2d.stroke();
   }
+  if (eraserCursor) drawEraserCursor(eraserCursor);
 }
 
 function drawPressureStroke(stroke: Stroke): void {
@@ -160,9 +221,29 @@ function scheduleRedraw(): void {
   });
 }
 
+function drawEraserCursor(point: CanvasPoint): void {
+  context2d.save();
+  context2d.beginPath();
+  context2d.arc(point.x, point.y, eraserWidth / 2, 0, Math.PI * 2);
+  context2d.fillStyle = "rgb(15 118 110 / 12%)";
+  context2d.strokeStyle = "#0f766e";
+  context2d.lineWidth = 1;
+  context2d.setLineDash([4, 3]);
+  context2d.fill();
+  context2d.stroke();
+  context2d.restore();
+}
+
+function eraseBetween(from: CanvasPoint, to: CanvasPoint): boolean {
+  const result = eraseStrokes(strokes, from, to, eraserWidth);
+  if (result.changed) strokes.splice(0, strokes.length, ...result.strokes);
+  return result.changed;
+}
+
 function pressureWidth(pressure = 0.5): number {
   const normalized = Math.max(0, Math.min(1, pressure));
-  return strokeWidth * normalized;
+  const response = Math.min(1, normalized / 0.7);
+  return 0.2 + (strokeWidth - 0.2) * response;
 }
 
 function resizeCanvas(): void {
@@ -179,6 +260,12 @@ function clear(): void {
   requestId += 1;
   strokes.splice(0);
   current = undefined;
+  activeTool = undefined;
+  eraserCursor = undefined;
+  previousEraserPoint = undefined;
+  pendingUndoSnapshot = undefined;
+  undoSnapshot = undefined;
+  updateUndoButton();
   redraw();
   renderResult();
   hideFeedback();
@@ -192,6 +279,7 @@ function recognize(): void {
   recognitionStartedAt = performance.now();
   element<HTMLButtonElement>("convert").disabled = true;
   element<HTMLButtonElement>("clear").disabled = true;
+  element<HTMLButtonElement>("undo").disabled = true;
   for (const button of element<HTMLElement>("level-picker").querySelectorAll<HTMLButtonElement>(
     "button",
   )) {
@@ -219,6 +307,7 @@ function receiveWorkerMessage(event: MessageEvent<WorkerResponse>): void {
     converting = false;
     element<HTMLButtonElement>("convert").disabled = false;
     element<HTMLButtonElement>("clear").disabled = false;
+    updateUndoButton();
     for (const button of element<HTMLElement>("level-picker").querySelectorAll<HTMLButtonElement>(
       "button",
     )) {
@@ -240,6 +329,7 @@ function receiveWorkerMessage(event: MessageEvent<WorkerResponse>): void {
   converting = false;
   element<HTMLButtonElement>("convert").disabled = false;
   element<HTMLButtonElement>("clear").disabled = false;
+  updateUndoButton();
   for (const button of element<HTMLElement>("level-picker").querySelectorAll<HTMLButtonElement>(
     "button",
   )) {
@@ -307,6 +397,11 @@ function updateLevelButtons(): void {
 }
 
 function updateInkOptionButtons(): void {
+  for (const button of element<HTMLElement>("tool-picker").querySelectorAll<HTMLButtonElement>(
+    "[data-tool]",
+  )) {
+    button.setAttribute("aria-pressed", String(button.dataset.tool === inkTool));
+  }
   for (const button of element<HTMLElement>(
     "stroke-mode-picker",
   ).querySelectorAll<HTMLButtonElement>("[data-stroke-mode]")) {
@@ -317,6 +412,41 @@ function updateInkOptionButtons(): void {
   ).querySelectorAll<HTMLButtonElement>("[data-stroke-width]")) {
     button.setAttribute("aria-pressed", String(Number(button.dataset.strokeWidth) === strokeWidth));
   }
+  const erasing = inkTool === "eraser";
+  element<HTMLElement>("stroke-mode-picker").hidden = erasing;
+  element<HTMLElement>("stroke-width-picker").hidden = erasing;
+  element<HTMLElement>("eraser-width-control").hidden = !erasing;
+  canvas.classList.toggle("eraser-active", erasing);
+}
+
+function finishInkAction(changed: boolean): void {
+  if (changed) undoSnapshot = pendingUndoSnapshot;
+  pendingUndoSnapshot = undefined;
+  updateUndoButton();
+}
+
+function undoLastInkAction(): void {
+  if (!undoSnapshot || converting) return;
+  requestId += 1;
+  strokes.splice(0, strokes.length, ...undoSnapshot);
+  undoSnapshot = undefined;
+  current = undefined;
+  activeTool = undefined;
+  eraserCursor = undefined;
+  previousEraserPoint = undefined;
+  redraw();
+  renderResult();
+  hideFeedback();
+  updateUndoButton();
+  setStatus(ready ? "준비됨" : "인식 엔진 준비 중…");
+}
+
+function updateUndoButton(): void {
+  element<HTMLButtonElement>("undo").disabled = converting || !undoSnapshot;
+}
+
+function cloneStrokes(): Stroke[] {
+  return strokes.map((stroke) => stroke.map((point) => ({ ...point })));
 }
 
 function currentExercise(): PracticeExercise | undefined {
@@ -436,3 +566,4 @@ type WorkerResponse =
   | { type: "complete"; id: number };
 
 type StrokeWidthMode = "pressure" | "constant";
+type InkTool = "pen" | "eraser";

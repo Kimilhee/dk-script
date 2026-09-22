@@ -110,6 +110,17 @@ header p {
   font-size: 12px;
   font-weight: 800;
 }
+.range-control input {
+  width: 110px;
+  accent-color: #0f766e;
+}
+.range-control output {
+  min-width: 20px;
+  color: #28384d;
+  font-size: 12px;
+  font-weight: 800;
+  text-align: right;
+}
 button {
   border: 0;
   border-radius: 8px;
@@ -150,6 +161,9 @@ canvas {
   border-radius: 9px;
   touch-action: none;
 }
+canvas.eraser-active {
+  cursor: crosshair;
+}
 .actions {
   order: -1;
   display: flex;
@@ -158,6 +172,7 @@ canvas {
   gap: 8px;
   margin-top: 8px;
 }
+#undo,
 #clear,
 .feedback-actions button:not(#next-exercise),
 #restart-practice {
